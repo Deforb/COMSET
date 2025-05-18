@@ -1,17 +1,20 @@
+A python version of [COMSET](https://github.com/steve-tjiang/GISCUP-2020/tree/master)
+
 # COMSET
 
 This project provides the COMSET simulator described in the
-[2020 GISCUP Problem Definition](https://sigspatial2020.sigspatial.org/giscup2020/problem). 
+[2020 GISCUP Problem Definition](https://sigspatial2020.sigspatial.org/giscup2020/problem).
 COMSET simulates taxicabs (called <i>agents</i>) searching for customers
-(called <i>resources</i>) to pick up in a city. 
+(called <i>resources</i>) to pick up in a city.
 The simulator serves as a standard testbed such that GISCUP contestants can develop
 and test their own fleet management algorithms. It will also serve as a testbed to evaluate submissions.
+
 ### Licensing
 
 The GISCUP follows the rules and policies of ACM regarding Code of Ethics, Conflict of Interest Policy,
-Policy Against Harassment, and all the other 
-guides as specified in 
-https://www.acm.org/special-interest-groups/volunteer-resources.
+Policy Against Harassment, and all the other
+guides as specified in
+<https://www.acm.org/special-interest-groups/volunteer-resources>.
 
 COMSET is licensed under an MIT license. The participants of GISCUP'20 shall license their CUP submissions under an
 MIT license as well.
@@ -26,7 +29,7 @@ data file<sup>1</sup>.
 Each resource corresponds to one trip record in the file, except that any trip such that its pickup location is identical to its dropoff location is discarded.
 Resources are cropped such that only those with
 both pickup and dropoff locations within the bounding polygon are kept.
-A certain number of agents (taxicabs) are deployed at random locations on the map. 
+A certain number of agents (taxicabs) are deployed at random locations on the map.
 
 The simulation is event driven.
 In **COMSETsystem.Simulator**
@@ -62,9 +65,18 @@ For example, Manhattan is divided into 69 Taxi Zones. Clearly, the location reso
 is insufficient for the CUP problem.
 Thus COMSET is designed to only work with the data before July of 2016.
 
-
-
 ## Getting Started
+
+```shell
+conda env create -f environment.yml
+conda activate comset
+```
+
+Then run the main file buy
+
+```shell
+python src/main.py
+```
 
 In order to run the COMSET simulator, the project should simply be cloned,
 built, and then it is ready to run.
@@ -102,12 +114,13 @@ Here are the class methods that contestants must provide:
     public abstract Intersection onReachIntersectionWithResource(long agentId, long time, LocationOnRoad currentLoc,
                                                                  Resource resource);
 
-
 #### onAgentIntroduced
+
 The simulation calls this method to notify the **FleetManager** that a new agent has been randomly
 placed and is available for assignment.
 
 #### onResourceAvailabilityChange
+
 The simulation calls this method to notify the **FleetManager** that the resource's state has changed:
 
 * resource becomes available for pickup
@@ -116,6 +129,7 @@ The simulation calls this method to notify the **FleetManager** that the resourc
 * resource has been picked up by an agent.
 
 #### onReachIntersection
+
 Calls to this method notifies that an agent has reached an intersection and is ready for new travel
 directions.
 This is called whenever any agent without an assigned resources reaches an intersection.
@@ -125,6 +139,7 @@ The intention is that the **FleetManager** will plan the cruising, to minimize t
 reach resources for pickup.
 
 #### OnReachIntersectionWithResource
+
 Calls to this method notifies that an agent with an picked up resource reaches an intersection.
 This method allows the **FleetManager** to plan the path of the agent to the resource's dropoff point.
 
@@ -136,16 +151,16 @@ When you clone the project Maven should be supported.
 If it is not, that is no problem, as it is quite easy.
 Netbeans usually supports it right away. In Intellij you can just follow the following link.
 
-https://www.jetbrains.com/help/idea/maven-support.html#maven_import_project_start
+<https://www.jetbrains.com/help/idea/maven-support.html#maven_import_project_start>
 
 In Eclipse you can just follow the following link.
 
-https://www.lagomframework.com/documentation/1.4.x/java/EclipseMavenInt.html
+<https://www.lagomframework.com/documentation/1.4.x/java/EclipseMavenInt.html>
 
 ### Installing, building, and running COMSET
 
 To install COMSET, <a href="https://github.com/Chessnl/COMSET-GISCUP/archive/V1.0.zip">download</a>
-from GitHub and unzip. 
+from GitHub and unzip.
 
 Run "<b>mvn install</b>" or "<b>mvn package</b>" to build.
 
@@ -155,7 +170,7 @@ The project can be run with mvn as follows:
 
 <b>mvn exec:java -Dexec.mainClass="Main"</b>
 
-With the configuration file coming up with the system, 
+With the configuration file coming up with the system,
 the above command will run simulation on the Manhattan road network with 5000 agents
 using the naive random-destination search strategy.
 The resources are the trip records for June 1st, 2016 starting from 8:00am until 10:00pm.
@@ -176,7 +191,7 @@ total number of searches: 229979
 
 In fact, if you run the simulator without changing anything in the code
 that is downloaded from GitHub, you should get exactly the same results as shown above.
-This is because the seed for the random placement of agents is fixed in Main.java. 
+This is because the seed for the random placement of agents is fixed in Main.java.
 If you want to do truly random experiments, follow the instructions in etc/configure.properties
 to make the seed be generated by a random number generator.
 
@@ -185,6 +200,7 @@ increase the maximum heap space using the -Xmx option in the command line (e.g.,
 If you are using Eclipse, change the -Xmx setting in eclipse.ini.
 
 ## Submission
+
 A contestant should submit the entire COMSET system including the proposed solution
 implemented as a sub-class of **COMSETsystem.FleetManager**.
 Store this sub-class in the <b>UserExamples</b> folder or another folder created by the participant.
@@ -193,11 +209,12 @@ A contestant may modify the COMSET code for debugging purposes during the develo
 However, when submitting the solution, the COMSET code should be exactly the same as released at GitHub.
 The only file that a contestant is allowed to modify is <b>etc/configure.properties</b>.
 A contestant should set <b>comset.fleetmanager_class</b> to point to the proposed solution and may add properties
-that are needed by the solution. 
+that are needed by the solution.
 
 ## Dynamic Travel Speeds of Agents
+
 Unlike 2019, the travel speeds of agents on road segments will vary over the course of a day based on the traffic pattern reflected in the TLC Trip Record data. The travel speed will not depend on the number of agents in
-the road segment. 
+the road segment.
 
 The travel speed at a road segment will be
 updated every one minute during a simulation.
@@ -213,9 +230,10 @@ The calibration goes as follows.
 In other words, we adjust the travel speeds so that the average trip time produced by
 COMSET is consistent with that of the real data.
 
-<b>Import Notice:</b> COMSET provides built-in functions CityMap::travelTimeBetween() and CityMap::shortestTravelTimePath() for computing the shortest travel time and the shortest travel time path between two locations on the map, respectively. It should be noted that the results returned by these functions are based on the speed limits, not the dynamic travel speed. 
+<b>Import Notice:</b> COMSET provides built-in functions CityMap::travelTimeBetween() and CityMap::shortestTravelTimePath() for computing the shortest travel time and the shortest travel time path between two locations on the map, respectively. It should be noted that the results returned by these functions are based on the speed limits, not the dynamic travel speed.
 
 ## Authors
+
 ## 2020 Authors
 
 * **Po-Han Chen**
