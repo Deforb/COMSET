@@ -292,15 +292,15 @@ class MapCreator:
             # a two-way street. Therefore, this has to be checked, and if this is
             # the case it has to be skipped.
             if len(roads_from) == 2 and len(roads_to) == 2:
-                checkForAll = True
+                check_for_all = True
                 for inter_to in vertex.get_adjacent_to():
                     check = False
                     for inter_from in vertex.get_adjacent_from():
                         if inter_to.id == inter_from.id:
                             check = True
                     if not check:
-                        checkForAll = False
-                if checkForAll:
+                        check_for_all = False
+                if check_for_all:
                     continue
 
             self.promote_intersection(vertex)
@@ -400,9 +400,9 @@ class MapCreator:
             first_vertex = self.vertices[first_id]
             self.check_neighbors(first_vertex, reached)
             if len(reached) != len(self.vertices):
-                for id in self.vertices.keys():
+                for id, vertex in self.vertices.items():
                     if id not in reached:
-                        self.vertices[id].cut_vertex()
+                        vertex.cut_vertex()
                         del self.vertices[id]
                         check = True
 
@@ -412,7 +412,8 @@ class MapCreator:
         #         reached.add(neighbor.id)
         #         self.check_neighbors(neighbor, reached)
         """
-        检查顶点邻居的连通性，使用迭代方式替代递归
+        检查顶点邻居的连通性
+
         Args:
             inter: 起始顶点
             reached: 已访问顶点ID集合

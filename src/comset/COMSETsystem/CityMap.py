@@ -93,7 +93,7 @@ class CityMap:
             return self.immutable_path_table[source.path_table_index][
                 destination.path_table_index
             ].travel_time
-        except TypeError:
+        except AttributeError:
             print("source.path_table_index = ", source.path_table_index)
             print("destination.path_table_index = ", destination.path_table_index)
             print("len(self.immutable_path_table) = ", len(self.immutable_path_table))
@@ -162,9 +162,9 @@ class CityMap:
             # source is set at distance 0
             source_entry = queue_entries[source]
             source_entry.cost = 0.0
-            path_table[source.path_table_index][source.path_table_index] = (
-                PathTableEntry(0.0, source.path_table_index)
-            )
+            idx = source.path_table_index
+            print(f'calc source {idx}')
+            path_table[idx][idx] = PathTableEntry(0.0, idx)
 
             heap = list(queue_entries.values())
             heapq.heapify(heap)
@@ -190,7 +190,7 @@ class CityMap:
                         )
                         heapq.heappush(heap, neighbor_entry)
 
-        # Make the path table unmodifiable 
+        # Make the path table unmodifiable
         self._make_path_table_unmodifiable(path_table)
 
     def _make_path_table_unmodifiable(
@@ -338,8 +338,9 @@ class CityMap:
         Compute the time zone ID of the map based on an arbitrary location of the map.
         It is assumed that the entire map falls into a single time zone. In other words,
         the map should not cross more than one time zones.
-        :return: the time zone ID of the map
-        :raises: ValueError if no time zone is found for the given coordinates
+
+        Return: the time zone ID of the map
+        Raises: ValueError if no time zone is found for the given coordinates
         """
         # Get an arbitrary location of the map
         intersection = next(iter(self.intersections.values()))

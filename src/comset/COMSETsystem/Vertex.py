@@ -19,8 +19,8 @@ class Vertex:
     ) -> None:
         """
         构造方法，支持两种初始化方式：
-        1. 用坐标值初始化：Vertex(longitude, latitude, x, y, id)
-        2. 用另一个Vertex对象复制：Vertex(other_vertex)
+        1. 用坐标值初始化: Vertex(longitude, latitude, x, y, id)
+        2. 用另一个Vertex对象复制: Vertex(other_vertex)
         """
         if len(args) == 1 and isinstance(args[0], Vertex):
             # 复制构造：Vertex(other_vertex)

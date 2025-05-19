@@ -23,7 +23,7 @@ def main():
         bounding_polygon_kml_file = config.get(
             "comset", "bounding_polygon_KML_file"
         ).strip()
-        
+
         agent_class_name = config.get("comset", "agent_class").strip()
         resource_maximum_life_time = int(
             config.get("comset", "resource_maximum_life_time")

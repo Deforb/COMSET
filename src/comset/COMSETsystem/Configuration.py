@@ -44,7 +44,7 @@ class Configuration:
         return cls._instance
 
     @classmethod
-    def get(cls):
+    def get(cls) -> Configuration:
         """获取配置实例"""
         if cls._instance is None:
             raise RuntimeError("Configuration has not been initialized")
@@ -79,12 +79,12 @@ class Configuration:
     # Beside make() and get(), most methods should be static. Much safer that way to avoid initialization problems
     # where they are called before proper initialization of the singleton.
     @classmethod
-    def to_seconds(cls, scaledSimulationTime: int):
-        return scaledSimulationTime / cls.TIME_RESOLUTION
+    def to_seconds(cls, scaled_simulation_time: int) -> int:
+        return scaled_simulation_time // cls.TIME_RESOLUTION
 
     @classmethod
-    def to_simulated_speed(cls, distancePerSecond: float):
-        return distancePerSecond / cls.TIME_RESOLUTION
+    def to_simulated_speed(cls, distance_per_second: float) -> float:
+        return distance_per_second / cls.TIME_RESOLUTION
 
     def _make_city_map(self) -> CityMap:
         creator = MapCreator(self)
