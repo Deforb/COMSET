@@ -5,18 +5,18 @@ from typing import Dict, List, Optional, Set, TYPE_CHECKING
 from tqdm import tqdm
 
 from comset.DataParsing.MapWithData import MapWithData
+from comset.COMSETsystem.AgentEvent import AgentEvent
+from comset.COMSETsystem.ResourceEvent import ResourceEvent
+from comset.COMSETsystem.ScoreInfo import ScoreInfo
+from comset.COMSETsystem.LocationOnRoad import LocationOnRoad
 
 if TYPE_CHECKING:
-    from COMSETsystem.ResourceEvent import ResourceEvent
-    from COMSETsystem.AgentEvent import AgentEvent
     from COMSETsystem.Configuration import Configuration
     from COMSETsystem.CityMap import CityMap
     from COMSETsystem.Event import Event
-    from COMSETsystem.ScoreInfo import ScoreInfo
     from COMSETsystem.BaseAgent import BaseAgent
     from COMSETsystem.FleetManager import FleetManager
     from COMSETsystem.TrafficPattern import TrafficPattern
-    from COMSETsystem.LocationOnRoad import LocationOnRoad
 
 
 class Simulator:
@@ -48,12 +48,6 @@ class Simulator:
 
         def get_time(self) -> int:
             return self.time
-
-    class AgentEventComparator:
-        """Compares AgentEvents by their id"""
-
-        def __call__(self, a1: AgentEvent, a2: AgentEvent) -> int:
-            return (a1.id > a2.id) - (a1.id < a2.id)
 
     def __init__(self, config: Configuration):
         self.configuration = config
@@ -147,8 +141,9 @@ class Simulator:
             total_simulation_time = (
                 self.simulation_end_time - self.simulation_start_time
             )
+            print(f"总模拟时间: {total_simulation_time}")
 
-            with tqdm(total=100, desc="Progress") as pbar:
+            with tqdm(total=100, desc="Progress", ascii=True) as pbar:
                 while self.events:
                     event = heapq.heappop(self.events)
                     self.simulation_time = event.time
@@ -173,9 +168,16 @@ class Simulator:
                         self.simulation_time <= self.simulation_end_time
                         or len(self.serving_agents) > 0
                     ):
-                        new_event = event.trigger()
-                        if new_event:
-                            self.add_event(new_event)
+                        try:
+                            new_event = event.trigger()
+                            if new_event:
+                                self.add_event(new_event)
+                        except Exception as e:
+                            print(f"事件触发失败: {str(e)}")
+                            print(f"事件类型: {type(event).__name__}")
+                            print(f"事件ID: {event.id}")
+                            print(f"事件时间: {event.time}")
+                            raise e
 
         except Exception as e:
             import traceback

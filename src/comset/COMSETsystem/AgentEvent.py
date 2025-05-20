@@ -5,12 +5,13 @@ from typing import Optional, TYPE_CHECKING, override
 
 from comset.COMSETsystem.AgentAction import AgentAction
 from comset.COMSETsystem.Event import Event
+from comset.COMSETsystem.LocationOnRoad import LocationOnRoad
+from comset.COMSETsystem.FleetManager import ResourceState
 
 if TYPE_CHECKING:
     from Simulator import Simulator
-    from FleetManager import FleetManager, ResourceState
+    from FleetManager import FleetManager
     from ResourceEvent import ResourceEvent
-    from LocationOnRoad import LocationOnRoad
 
 
 logger = logging.getLogger(__name__)
@@ -233,7 +234,7 @@ class AgentEvent(Event):
             static_approach_time,
         )
 
-        self.assigned_resource.pickup(self, self.time)
+        self.assigned_resource.pickup(self.time)
         action = self.fleet_manager.on_resource_availability_change(
             self.assigned_resource.copy_resource(),
             ResourceState.PICKED_UP,

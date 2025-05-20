@@ -2,7 +2,6 @@ import csv
 from datetime import datetime
 from zoneinfo import ZoneInfo
 from typing import List
-import traceback
 
 from comset.MapCreation.MapCreator import MapCreator
 from comset.DataParsing.Resource import Resource
@@ -96,6 +95,8 @@ class CSVNewYorkParser:
                     )
 
         except Exception as e:
+            import traceback
+
             traceback.print_exc()
 
         return self.resources

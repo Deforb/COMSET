@@ -2,11 +2,10 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Optional, TypeVar, TYPE_CHECKING
 
-
-
 if TYPE_CHECKING:
     from COMSETsystem.Simulator import Simulator
     from COMSETsystem.FleetManager import FleetManager
+    # from COMSETsystem.AgentEvent import AgentEvent
 
 # For type hinting the return type of trigger()
 EventType = TypeVar("EventType", bound="Event")
@@ -80,8 +79,7 @@ class Event(ABC):
                 exit(1)
         else:
             # if not same type, agent should be processed first
-            from COMSETsystem.AgentEvent import AgentEvent
-            return isinstance(self, AgentEvent)
+            return self.__class__.__name__ == "AgentEvent"
 
     @property
     def time(self) -> int:

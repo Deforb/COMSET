@@ -3,15 +3,14 @@ from collections import deque
 from random import Random
 from typing import Optional, Set, Dict, Deque, TYPE_CHECKING, override
 
-from comset.COMSETsystem.FleetManager import FleetManager
+from comset.COMSETsystem.FleetManager import FleetManager, ResourceState
+from comset.COMSETsystem.AgentAction import AgentAction
+from comset.COMSETsystem.LocationOnRoad import LocationOnRoad
 
 if TYPE_CHECKING:
-    from COMSETsystem.FleetManager import ResourceState
     from COMSETsystem.CityMap import CityMap
-    from COMSETsystem.LocationOnRoad import LocationOnRoad
     from COMSETsystem.Resource import Resource
     from COMSETsystem.Intersection import Intersection
-    from COMSETsystem.AgentAction import AgentAction
 
 
 class RandomDestinationFleetManager(FleetManager):

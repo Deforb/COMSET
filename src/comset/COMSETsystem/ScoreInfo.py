@@ -121,7 +121,7 @@ class ScoreInfo:
         print(
             f"Resource Maximum Life Time: {self.configuration.resource_maximum_life_time} seconds"
         )
-        print(f"Fleet Manager class: {self.configuration.agent_class_name}")
+        print(f"Fleet Manager class: {self.configuration.fleet_manager_class}")
         print(f"Time resolution: {self.configuration.TIME_RESOLUTION}")
         print(f"Simulation Start Time: {self.simulator.simulation_start_time}")
         print(f"Simulation End Time: {self.simulator.simulation_end_time}")

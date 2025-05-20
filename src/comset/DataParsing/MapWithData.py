@@ -3,7 +3,11 @@ import heapq
 import random
 import math
 import sys
-from typing import List, TYPE_CHECKING
+from typing import List, TYPE_CHECKING, Tuple, Optional, Dict
+from comset.utils.parallel_processor import ParallelProcessor
+from multiprocessing import shared_memory
+import numpy as np
+import pickle
 
 from comset.DataParsing.CSVNewYorkParser import CSVNewYorkParser
 from comset.COMSETsystem.Configuration import Configuration
@@ -11,12 +15,47 @@ from comset.COMSETsystem.AgentEvent import AgentEvent
 from comset.COMSETsystem.ResourceEvent import ResourceEvent
 from comset.COMSETsystem.LocationOnRoad import LocationOnRoad
 from comset.COMSETsystem.TrafficPattern import TrafficPattern
+from comset.DataParsing.KdTree import KdTree
 
 if TYPE_CHECKING:
     from COMSETsystem.CityMap import CityMap
     from Resource import Resource
     from COMSETsystem.Simulator import Simulator
     from COMSETsystem.FleetManager import FleetManager
+
+
+def process_single_resource_wrapper(data: Dict) -> Optional[Dict]:
+    """
+    处理单个资源数据的包装函数，返回处理后的完整数据。
+
+    Args:
+        data: 包含经纬度和时间信息的字典
+
+    Returns:
+        包含所有处理结果的字典，如果处理失败则返回None
+    """
+    try:
+        # 计算距离
+        distance = math.sqrt(
+            (data['pickup_lon'] - data['dropoff_lon']) ** 2
+            + (data['pickup_lat'] - data['dropoff_lat']) ** 2
+        )
+
+        # 估算行程时间（假设平均速度30km/h）
+        estimated_time = distance * 111.32 * 3600 / 30  # 转换为秒
+
+        return {
+            'pickup_lon': data['pickup_lon'],
+            'pickup_lat': data['pickup_lat'],
+            'dropoff_lon': data['dropoff_lon'],
+            'dropoff_lat': data['dropoff_lat'],
+            'time': data['time'],
+            'index': data['index'],
+            'estimated_time': estimated_time,
+        }
+    except Exception as e:
+        print(f"处理资源时出错: {str(e)}")
+        return None
 
 
 class MapWithData:
@@ -60,55 +99,145 @@ class MapWithData:
         """
         parser = CSVNewYorkParser(self.resource_file, self.zone_id)
         self.resources_parsed = parser.parse(Configuration.TIME_RESOLUTION)
+        total_resources = len(self.resources_parsed)
+        print(f"总共解析到 {total_resources} 条资源数据")
 
         try:
-            for resource in self.resources_parsed:
-                # 地图匹配获取上下车位置
-                pickup_match = self.map_match(resource.pickup_lon, resource.pickup_lat)
-                dropoff_match = self.map_match(
-                    resource.dropoff_lon, resource.dropoff_lat
-                )
+            process_data = [
+                {
+                    'pickup_lon': resource.pickup_lon,
+                    'pickup_lat': resource.pickup_lat,
+                    'dropoff_lon': resource.dropoff_lon,
+                    'dropoff_lat': resource.dropoff_lat,
+                    'time': resource.time,
+                    'index': i,
+                }
+                for i, resource in enumerate(self.resources_parsed)
+            ]
 
-                # 计算静态行程时间
-                # TODO: won't need trip time
-                static_trip_time = int(
-                    simulator.map_for_agents.travel_time_between(
-                        pickup_match, dropoff_match
+            # 并行处理资源
+            print("开始处理资源...")
+            results = ParallelProcessor.process(
+                process_data,
+                process_single_resource_wrapper,
+                use_imap=True,
+                chunk_size=1000,  # 增加chunk大小
+                desc="处理资源",
+            )
+
+            success_count = 0
+            events_list = []
+            resource_maximum_life_time = configuration.resource_maximum_life_time
+
+            # 批量处理地图匹配
+            batch_size = 1000
+            current_batch = []
+
+            for result in results:
+                if result is None:
+                    continue
+
+                current_batch.append(result)
+
+                # 当批次达到指定大小时进行处理
+                if len(current_batch) >= batch_size:
+                    self._process_batch(
+                        current_batch,
+                        events_list,
+                        resource_maximum_life_time,
+                        simulator,
+                        fleet_manager,
                     )
-                )
+                    success_count += len(current_batch)
+                    current_batch = []
 
-                # 设置资源位置信息
-                resource.pickup_location = pickup_match
-                resource.dropoff_location = dropoff_match
+                    if success_count % 10000 == 0:
+                        print(f"处理进度: {success_count}/{total_resources}")
 
-                # 创建资源事件并加入队列
-                ev = ResourceEvent(
-                    pickup_match,
-                    dropoff_match,
-                    resource.time,
-                    static_trip_time,
+            # 处理剩余的批次
+            if current_batch:
+                self._process_batch(
+                    current_batch,
+                    events_list,
+                    resource_maximum_life_time,
                     simulator,
                     fleet_manager,
-                    configuration.resource_maximum_life_time,
                 )
-                heapq.heappush(self.events, ev)
+                success_count += len(current_batch)
 
-                # 更新最早和最晚资源时间
-                if resource.time < self.earliest_resource_time:
-                    self.earliest_resource_time = resource.time
+            # 批量创建事件队列
+            print("创建事件队列...")
+            self.events = events_list
+            heapq.heapify(self.events)
 
-                resource_maximum_life_time = configuration.resource_maximum_life_time
-                new_end_time = (
-                    resource.time + resource_maximum_life_time + ev.static_trip_time
-                )
-                if new_end_time > self.latest_resource_time:
-                    self.latest_resource_time = new_end_time
         except Exception as e:
             import traceback
 
             traceback.print_exc()
 
         return self.latest_resource_time
+
+    def _process_batch(
+        self,
+        batch: List[Dict],
+        events_list: List[ResourceEvent],
+        resource_maximum_life_time: int,
+        simulator: Simulator,
+        fleet_manager: FleetManager,
+    ) -> None:
+        """
+        批量处理地图匹配和事件创建。
+
+        Args:
+            batch: 要处理的数据批次
+            events_list: 事件列表
+            resource_maximum_life_time: 资源最大生命周期
+            simulator: 模拟器对象
+            fleet_manager: 车队管理器对象
+        """
+        for result in batch:
+            # 地图匹配获取上下车位置
+            pickup_link = self.map.get_nearest_link(
+                result['pickup_lon'], result['pickup_lat']
+            )
+            dropoff_link = self.map.get_nearest_link(
+                result['dropoff_lon'], result['dropoff_lat']
+            )
+
+            # 创建LocationOnRoad对象
+            pickup_match = LocationOnRoad(pickup_link.road, pickup_link.begin_time)
+            dropoff_match = LocationOnRoad(dropoff_link.road, dropoff_link.begin_time)
+
+            # 使用估算的行程时间
+            static_trip_time = int(result['estimated_time'])
+
+            # 设置资源位置信息
+            resource = self.resources_parsed[result['index']]
+            resource.pickup_location = pickup_match
+            resource.dropoff_location = dropoff_match
+
+            # 创建资源事件
+            ev = ResourceEvent(
+                pickup_match,
+                dropoff_match,
+                result['time'],
+                static_trip_time,
+                simulator,
+                fleet_manager,
+                resource_maximum_life_time,
+            )
+
+            events_list.append(ev)
+
+            # 更新最早和最晚资源时间
+            if result['time'] < self.earliest_resource_time:
+                self.earliest_resource_time = result['time']
+
+            new_end_time = (
+                result['time'] + resource_maximum_life_time + static_trip_time
+            )
+            if new_end_time > self.latest_resource_time:
+                self.latest_resource_time = new_end_time
 
     # 获取交通模式（动态交通模式构建）
     def get_traffic_pattern(

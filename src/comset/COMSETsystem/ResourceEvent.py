@@ -4,14 +4,15 @@ import logging
 from typing import Optional, override, TYPE_CHECKING
 
 from comset.COMSETsystem.Event import Event
+from comset.COMSETsystem.FleetManager import ResourceState
+from comset.COMSETsystem.Resource import Resource
 
 if TYPE_CHECKING:
     from COMSETsystem.Simulator import Simulator
-    from COMSETsystem.FleetManager import FleetManager, ResourceState
+    from COMSETsystem.FleetManager import FleetManager
     from COMSETsystem.AgentAction import AgentAction
     from COMSETsystem.LocationOnRoad import LocationOnRoad
     from COMSETsystem.AgentEvent import AgentEvent
-    from COMSETsystem.Resource import Resource
 
 
 logger = logging.getLogger(__name__)

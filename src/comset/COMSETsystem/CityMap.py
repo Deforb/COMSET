@@ -5,6 +5,7 @@ from collections import deque
 from typing import Dict, List, Optional, Tuple, Deque, Union, TYPE_CHECKING
 from dataclasses import dataclass
 from zoneinfo import ZoneInfo
+from multiprocessing import Pool, cpu_count
 
 from timezonefinder import TimezoneFinder
 
@@ -138,60 +139,106 @@ class CityMap:
 
     def calc_travel_times(self) -> None:
         """
-        Compute all-pair shortest travel times using Dijkstra's algorithm.
+        计算所有节点对之间的最短路径时间。
+        使用Dijkstra算法，通过进程池实现并行计算。
         """
+        from multiprocessing import Pool, cpu_count
 
-        # initialize path table
         n = len(self.intersections)
-        path_table: List[List[Optional[PathTableEntry]]] = [
-            [None] * n for _ in range(n)
-        ]
+        path_table = [[None] * n for _ in range(n)]
 
-        # creates a queue entry for each intersection
-        queue_entries: Dict[Intersection, CityMap.DijkstraQueueEntry] = {
-            intersection: CityMap.DijkstraQueueEntry(intersection)
-            for intersection in self.intersections.values()
+        # 准备源节点列表和必要的数据
+        sources = list(self.intersections.values())
+        road_data = {
+            source.id: [
+                (road.to.id, road.to.path_table_index, road.travel_time)
+                for road in source.get_roads_from()
+            ]
+            for source in sources
         }
 
-        for source in self.intersections.values():
-            # 'reset' every queue entry
-            for entry in queue_entries.values():
-                entry.cost = float("inf")
-                entry.in_queue = True
+        # 创建进程池并计算
+        with Pool(processes=cpu_count()) as pool:
+            # 使用imap来获取结果，这样可以按顺序处理
+            for i, result in enumerate(
+                pool.imap(
+                    self._calc_travel_times_for_source_static,
+                    [
+                        (source.id, source.path_table_index, road_data)
+                        for source in sources
+                    ],
+                )
+            ):
+                source = sources[i]
+                path_table[source.path_table_index] = result
 
-            # source is set at distance 0
-            source_entry = queue_entries[source]
-            source_entry.cost = 0.0
-            idx = source.path_table_index
-            print(f'calc source {idx}')
-            path_table[idx][idx] = PathTableEntry(0.0, idx)
-
-            heap = list(queue_entries.values())
-            heapq.heapify(heap)
-
-            while heap:
-                entry: CityMap.DijkstraQueueEntry = heapq.heappop(heap)
-                if not entry.in_queue:
-                    continue
-                entry.in_queue = False
-
-                for road in entry.intersection.get_roads_from():
-                    neighbor_entry = queue_entries[road.to]
-                    if not neighbor_entry.in_queue:
-                        continue
-
-                    new_cost = entry.cost + road.travel_time
-                    if new_cost < neighbor_entry.cost:
-                        neighbor_entry.cost = new_cost
-                        path_table[source.path_table_index][
-                            neighbor_entry.intersection.path_table_index
-                        ] = PathTableEntry(
-                            new_cost, entry.intersection.path_table_index
-                        )
-                        heapq.heappush(heap, neighbor_entry)
-
-        # Make the path table unmodifiable
+        # 使路径表不可修改
         self._make_path_table_unmodifiable(path_table)
+
+    @staticmethod
+    def _calc_travel_times_for_source_static(
+        args: Tuple[int, int, Dict[int, List[Tuple[int, int, float]]]],
+    ) -> List[Optional[PathTableEntry]]:
+        """
+        计算从给定源节点到所有其他节点的最短路径。
+        这是一个静态方法，只接收必要的数据，避免序列化整个CityMap对象。
+
+        Args:
+            args: 包含(源节点ID, 源节点路径表索引, 道路数据)的元组
+                道路数据格式: {node_id: [(neighbor_id, neighbor_idx, travel_time), ...]}
+
+        Returns:
+            包含从源节点到所有其他节点的最短路径信息的列表
+        """
+        source_id, source_idx, road_data = args
+        if source_idx % 500 == 0:
+            print(f'calculating source {source_idx}')
+        n = len(road_data)  # 节点数量等于road_data的长度
+        path_table_row = [None] * n
+
+        # 创建队列条目
+        queue_entries = {
+            node_id: {'cost': float('inf'), 'in_queue': True}
+            for node_id in road_data.keys()
+        }
+
+        # 创建节点ID到路径表索引的映射
+        node_to_index = {}
+        for node_id, neighbors in road_data.items():
+            # 找到当前节点作为邻居时的索引
+            for other_id, other_neighbors in road_data.items():
+                for neighbor_id, neighbor_idx, _ in other_neighbors:
+                    if neighbor_id == node_id:
+                        node_to_index[node_id] = neighbor_idx
+                        break
+                if node_id in node_to_index:
+                    break
+
+        # 设置源节点
+        queue_entries[source_id]['cost'] = 0.0
+        path_table_row[source_idx] = PathTableEntry(0.0, source_idx)
+
+        # 使用列表模拟堆
+        heap = [(0.0, source_id)]
+
+        while heap:
+            current_cost, current_id = heapq.heappop(heap)
+            if not queue_entries[current_id]['in_queue']:
+                continue
+            queue_entries[current_id]['in_queue'] = False
+
+            for neighbor_id, neighbor_idx, travel_time in road_data[current_id]:
+                if not queue_entries[neighbor_id]['in_queue']:
+                    continue
+
+                new_cost = current_cost + travel_time
+                if new_cost < queue_entries[neighbor_id]['cost']:
+                    queue_entries[neighbor_id]['cost'] = new_cost
+                    current_idx = node_to_index[current_id]
+                    path_table_row[neighbor_idx] = PathTableEntry(new_cost, current_idx)
+                    heapq.heappush(heap, (new_cost, neighbor_id))
+
+        return path_table_row
 
     def _make_path_table_unmodifiable(
         self, path_table: List[List[Optional[PathTableEntry]]]
