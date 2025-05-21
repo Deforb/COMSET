@@ -5,7 +5,6 @@ from collections import deque
 from typing import Dict, List, Optional, Tuple, Deque, Union, TYPE_CHECKING
 from dataclasses import dataclass
 from zoneinfo import ZoneInfo
-from multiprocessing import Pool, cpu_count
 
 from timezonefinder import TimezoneFinder
 
@@ -16,6 +15,7 @@ from comset.COMSETsystem.Link import Link
 from comset.COMSETsystem.Road import Road
 from comset.COMSETsystem.Intersection import Intersection
 from comset.COMSETsystem.Point2D import Point2D
+from comset.utils.parallel_processor import ParallelProcessor
 
 if TYPE_CHECKING:
     from DataParsing.KdTree import KdTree
@@ -142,8 +142,6 @@ class CityMap:
         计算所有节点对之间的最短路径时间。
         使用Dijkstra算法，通过进程池实现并行计算。
         """
-        from multiprocessing import Pool, cpu_count
-
         n = len(self.intersections)
         path_table = [[None] * n for _ in range(n)]
 
@@ -157,42 +155,44 @@ class CityMap:
             for source in sources
         }
 
-        # 创建进程池并计算
-        with Pool(processes=cpu_count()) as pool:
-            # 使用imap来获取结果，这样可以按顺序处理
-            for i, result in enumerate(
-                pool.imap(
-                    self._calc_travel_times_for_source_static,
-                    [
-                        (source.id, source.path_table_index, road_data)
-                        for source in sources
-                    ],
-                )
-            ):
-                source = sources[i]
-                path_table[source.path_table_index] = result
+        # 准备处理数据
+        process_items = [
+            (source.id, source.path_table_index, road_data) for source in sources
+        ]
+
+        # 使用ParallelProcessor进行并行计算
+        results = ParallelProcessor.process_star(
+            items=process_items,
+            process_func=self._calc_travel_times_for_source_static,
+            desc="计算最短路径时间",
+        )
+
+        # 将结果填入路径表
+        for i, result in enumerate(results):
+            source = sources[i]
+            path_table[source.path_table_index] = result
 
         # 使路径表不可修改
         self._make_path_table_unmodifiable(path_table)
 
     @staticmethod
     def _calc_travel_times_for_source_static(
-        args: Tuple[int, int, Dict[int, List[Tuple[int, int, float]]]],
+        source_id: int,
+        source_idx: int,
+        road_data: Dict[int, List[Tuple[int, int, float]]],
     ) -> List[Optional[PathTableEntry]]:
         """
         计算从给定源节点到所有其他节点的最短路径。
         这是一个静态方法，只接收必要的数据，避免序列化整个CityMap对象。
 
         Args:
-            args: 包含(源节点ID, 源节点路径表索引, 道路数据)的元组
-                道路数据格式: {node_id: [(neighbor_id, neighbor_idx, travel_time), ...]}
+            source_id: 源节点ID
+            source_idx: 源节点路径表索引
+            road_data: 道路数据，格式为 {node_id: [(neighbor_id, neighbor_idx, travel_time), ...]}
 
         Returns:
             包含从源节点到所有其他节点的最短路径信息的列表
         """
-        source_id, source_idx, road_data = args
-        if source_idx % 500 == 0:
-            print(f'calculating source {source_idx}')
         n = len(road_data)  # 节点数量等于road_data的长度
         path_table_row = [None] * n
 

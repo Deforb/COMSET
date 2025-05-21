@@ -1,5 +1,6 @@
-from typing import List, Tuple
+from typing import List, Tuple, Dict
 from dataclasses import dataclass
+from functools import lru_cache
 
 from comset.COMSETsystem.LocationOnRoad import LocationOnRoad
 
@@ -10,7 +11,7 @@ class TrafficPattern:
     of a day.
     """
 
-    @dataclass
+    @dataclass(frozen=True)
     class TrafficPatternItem:
         epoch_begin_time: int
         speed_factor: float
@@ -25,6 +26,9 @@ class TrafficPattern:
         self.last_epoch_begin_time: int = 0
         self.first_epoch_speed_factor: float = 0.0
         self.last_epoch_speed_factor: float = 0.0
+        # 缓存计算结果
+        self._travel_time_cache: Dict[Tuple[float, float, float], float] = {}
+        self._travel_distance_cache: Dict[Tuple[float, float, float, float], Tuple[float, float]] = {}
 
     def add_traffic_pattern_item(
         self, epoch_begin_time: int, speed_factor: float
@@ -36,6 +40,9 @@ class TrafficPattern:
             self.first_epoch_speed_factor = speed_factor
         self.last_epoch_begin_time = epoch_begin_time
         self.last_epoch_speed_factor = speed_factor
+        # 清除缓存
+        self._travel_time_cache.clear()
+        self._travel_distance_cache.clear()
 
     def get_speed_factor(self, time: int) -> float:
         if time < self.first_epoch_begin_time:
@@ -49,45 +56,65 @@ class TrafficPattern:
         self, time: float, unadjusted_speed: float, distance: float
     ) -> float:
         """compute the dynamic travel time to travel a certain distance of a link starting at a certain time."""
+        # 检查缓存
+        cache_key = (time, unadjusted_speed, distance)
+        if cache_key in self._travel_time_cache:
+            return self._travel_time_cache[cache_key]
+
+        # 如果时间超出范围，使用固定速度计算
+        if time >= self.last_epoch_begin_time:
+            speed_factor = self.last_epoch_speed_factor
+            adjusted_speed = unadjusted_speed * speed_factor
+            total_time = distance / adjusted_speed
+            self._travel_time_cache[cache_key] = total_time
+            return total_time
+
+        # 如果时间在第一个时间窗口之前，使用初始速度计算
+        if time < self.first_epoch_begin_time:
+            speed_factor = self.first_epoch_speed_factor
+            adjusted_speed = unadjusted_speed * speed_factor
+            total_time = distance / adjusted_speed
+            self._travel_time_cache[cache_key] = total_time
+            return total_time
+
+        # 正常计算
         total_distance = 0.0
         total_time = 0.0
         current_time = time
 
-        while True:
-            step_time: float
-            if current_time >= self.last_epoch_begin_time:
+        while total_distance < distance:
+            # 确保pattern_index在有效范围内
+            pattern_index = int((current_time - self.first_epoch_begin_time) // self.step)
+            if pattern_index >= len(self.traffic_pattern):
+                # 如果超出范围，使用最后一个速度因子
                 speed_factor = self.last_epoch_speed_factor
                 adjusted_speed = unadjusted_speed * speed_factor
-                step_time = (distance - total_distance) / adjusted_speed
-                total_time += step_time
+                remaining_distance = distance - total_distance
+                total_time += remaining_distance / adjusted_speed
+                break
+            
+            speed_factor = self.traffic_pattern[pattern_index].speed_factor
+            adjusted_speed = unadjusted_speed * speed_factor
+            
+            # 计算当前时间窗口的结束时间
+            window_end_time = self.traffic_pattern[pattern_index].epoch_begin_time + self.step
+            
+            # 计算在当前速度下能行驶的距离
+            remaining_distance = distance - total_distance
+            time_in_window = window_end_time - current_time
+            distance_in_window = adjusted_speed * time_in_window
+            
+            if distance_in_window >= remaining_distance:
+                # 可以在当前窗口内完成剩余距离
+                total_time += remaining_distance / adjusted_speed
                 break
             else:
-                if current_time < self.first_epoch_begin_time:
-                    step_time = self.first_epoch_begin_time - current_time
-                    speed_factor = self.first_epoch_speed_factor
-                else:
-                    pattern_index = int(
-                        (current_time - self.first_epoch_begin_time) // self.step
-                    )
-                    step_time = (
-                        self.traffic_pattern[pattern_index].epoch_begin_time
-                        + self.step
-                        - current_time
-                    )
-                    speed_factor = self.traffic_pattern[pattern_index].speed_factor
-                adjusted_speed = unadjusted_speed * speed_factor
-                step_distance = adjusted_speed * step_time
-                if total_distance + step_distance < distance:
-                    # finish a full step
-                    total_distance += step_distance
-                    total_time += step_time
-                    current_time += step_time
-                else:
-                    # finish a partial step
-                    remaining_distance = distance - total_distance
-                    remaining_time = remaining_distance / adjusted_speed
-                    total_time += remaining_time
-                    break
+                # 需要进入下一个时间窗口
+                total_distance += distance_in_window
+                total_time += time_in_window
+                current_time = window_end_time
+
+        self._travel_time_cache[cache_key] = total_time
         return total_time
 
     def road_travel_time_to_end_intersection(
@@ -139,57 +166,67 @@ class TrafficPattern:
         max_distance: float,
     ) -> Tuple[float, float]:
         """compute the travel distance along a link for a certain time starting at a given time"""
+        # 检查缓存
+        cache_key = (time, unadjusted_speed, travel_time, max_distance)
+        if cache_key in self._travel_distance_cache:
+            return self._travel_distance_cache[cache_key]
+
+        # 如果时间超出范围，使用固定速度计算
+        if time >= self.last_epoch_begin_time:
+            speed_factor = self.last_epoch_speed_factor
+            adjusted_speed = unadjusted_speed * speed_factor
+            distance = min(travel_time * adjusted_speed, max_distance)
+            total_time = distance / adjusted_speed
+            result = (distance, total_time)
+            self._travel_distance_cache[cache_key] = result
+            return result
+
+        # 如果时间在第一个时间窗口之前，使用初始速度计算
+        if time < self.first_epoch_begin_time:
+            speed_factor = self.first_epoch_speed_factor
+            adjusted_speed = unadjusted_speed * speed_factor
+            distance = min(travel_time * adjusted_speed, max_distance)
+            total_time = distance / adjusted_speed
+            result = (distance, total_time)
+            self._travel_distance_cache[cache_key] = result
+            return result
+
+        # 正常计算
         total_distance = 0.0
         total_time = 0.0
         current_time = time
 
-        while True:
-            step_time: float
-            if current_time >= self.last_epoch_begin_time:
-                speed_factor = self.last_epoch_speed_factor
-                adjusted_speed = unadjusted_speed * speed_factor
-                distance = (travel_time - total_time) * adjusted_speed
-                if total_distance + distance > max_distance:
-                    remaining_distance = max_distance - total_distance
-                    total_time += remaining_distance / adjusted_speed
-                    total_distance = max_distance
-                else:
-                    total_distance += distance
-                    total_time = travel_time
+        while total_time < travel_time and total_distance < max_distance:
+            pattern_index = int((current_time - self.first_epoch_begin_time) // self.step)
+            speed_factor = self.traffic_pattern[pattern_index].speed_factor
+            adjusted_speed = unadjusted_speed * speed_factor
+            
+            # 计算当前时间窗口的结束时间
+            window_end_time = self.traffic_pattern[pattern_index].epoch_begin_time + self.step
+            
+            # 计算在当前速度下能行驶的时间
+            remaining_time = travel_time - total_time
+            time_in_window = window_end_time - current_time
+            time_to_use = min(time_in_window, remaining_time)
+            
+            # 计算在当前速度下能行驶的距离
+            distance_in_window = adjusted_speed * time_to_use
+            if total_distance + distance_in_window > max_distance:
+                # 超过最大距离限制
+                remaining_distance = max_distance - total_distance
+                time_needed = remaining_distance / adjusted_speed
+                total_time += time_needed
+                total_distance = max_distance
                 break
             else:
-                if current_time < self.first_epoch_begin_time:
-                    step_time = self.first_epoch_begin_time - current_time
-                    speed_factor = self.first_epoch_speed_factor
-                else:
-                    pattern_index = int(
-                        (current_time - self.first_epoch_begin_time) // self.step
-                    )
-                    step_time = (
-                        self.traffic_pattern[pattern_index].epoch_begin_time
-                        + self.step
-                        - current_time
-                    )
-                    speed_factor = self.traffic_pattern[pattern_index].speed_factor
-                adjusted_speed = unadjusted_speed * speed_factor
-                if total_time + step_time > travel_time:
-                    remaining_time = travel_time - total_time
-                    distance = adjusted_speed * remaining_time
-                    total_distance += distance
-                    total_time = travel_time
-                    break
-                else:
-                    distance = adjusted_speed * step_time
-                    if total_distance + distance > max_distance:
-                        remaining_distance = max_distance - total_distance
-                        total_time += remaining_distance / adjusted_speed
-                        total_distance = max_distance
-                        break
-                    else:
-                        total_distance += distance
-                        total_time += step_time
-                        current_time += step_time
-        return (total_distance, total_time)
+                # 继续行驶
+                total_distance += distance_in_window
+                total_time += time_to_use
+                current_time += time_to_use
+
+        result = (total_distance, total_time)
+        self._travel_distance_cache[cache_key] = result
+        return result
 
     def travel_road_for_time(
         self, time: int, location_on_road: LocationOnRoad, travel_time: int

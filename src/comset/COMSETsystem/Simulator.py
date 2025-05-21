@@ -143,7 +143,7 @@ class Simulator:
             )
             print(f"总模拟时间: {total_simulation_time}")
 
-            with tqdm(total=100, desc="Progress", ascii=True) as pbar:
+            with tqdm(total=100, desc="Progress") as pbar:
                 while self.events:
                     event = heapq.heappop(self.events)
                     self.simulation_time = event.time
@@ -161,8 +161,7 @@ class Simulator:
                             / total_simulation_time
                             * 100
                         )
-                        pbar.n = min(progress, 100)
-                        pbar.refresh()
+                        pbar.update(min(progress, 100))
 
                     if (
                         self.simulation_time <= self.simulation_end_time

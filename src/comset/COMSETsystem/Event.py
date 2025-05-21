@@ -47,7 +47,7 @@ class Event(ABC):
         Function called when the Event needs to be executed.
 
         Returns:
-            new Event if needed
+            new Event if needed.
         """
         pass
 

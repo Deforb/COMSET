@@ -3,6 +3,7 @@ from typing import List, TypeVar, Callable, Any, Optional, Tuple
 from multiprocessing import Pool, cpu_count
 from functools import partial
 import logging
+from tqdm import tqdm
 
 T = TypeVar('T')
 R = TypeVar('R')
@@ -51,10 +52,10 @@ class ParallelProcessor:
             with Pool(processes=n_jobs) as pool:
                 if use_imap:
                     results = []
-                    for i, result in enumerate(pool.imap(process_func_with_args, items, chunksize=chunk_size)):
-                        if i % 100 == 0:
-                            logging.info(f"{desc}: {i}/{len(items)}")
-                        results.append(result)
+                    with tqdm(total=len(items), desc=desc) as pbar:
+                        for result in pool.imap(process_func_with_args, items, chunksize=chunk_size):
+                            results.append(result)
+                            pbar.update(1)
                     return results
                 else:
                     return pool.map(process_func_with_args, items, chunksize=chunk_size)
@@ -92,10 +93,13 @@ class ParallelProcessor:
         try:
             with Pool(processes=n_jobs) as pool:
                 results = []
-                for i, result in enumerate(pool.starmap(process_func, items, chunksize=chunk_size)):
-                    if i % 100 == 0:
-                        logging.info(f"{desc}: {i}/{len(items)}")
-                    results.append(result)
+                with tqdm(total=len(items), desc=desc) as pbar:
+                    # 使用 imap 和 starmap 的组合来实现进度更新
+                    for i in range(0, len(items), chunk_size):
+                        chunk = items[i:i + chunk_size]
+                        chunk_results = pool.starmap(process_func, chunk)
+                        results.extend(chunk_results)
+                        pbar.update(len(chunk))
                 return results
         except Exception as e:
             logging.error(f"并行处理出错: {str(e)}")
