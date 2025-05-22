@@ -156,12 +156,13 @@ class Simulator:
 
                     # Update progress bar
                     if total_simulation_time > 0:
-                        progress = (
+                        progress = min(
                             (event.time - self.simulation_start_time)
                             / total_simulation_time
-                            * 100
+                            * 100,
+                            100
                         )
-                        pbar.update(min(progress, 100))
+                        pbar.update(progress - pbar.n)
 
                     if (
                         self.simulation_time <= self.simulation_end_time
@@ -231,9 +232,9 @@ class Simulator:
         """
         Make an agent copy of locationOnRoad so that an agent cannot modify the attributes of the road.
 
-            Args:
+        Args:
             locationOnRoad the location to make a copy for
-            Return:
+        Return:
             an agent copy of the location
         """
         from_inter = self.map_for_agents.intersections[location.road.from_.id]

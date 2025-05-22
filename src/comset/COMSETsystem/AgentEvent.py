@@ -279,9 +279,10 @@ class AgentEvent(Event):
             self.time,
         )
 
+        # 先清理当前资源
+        self._unassign_resource()
+
         if not self._is_valid_assignment_action(action):
-            self._unassign_resource()
-            self.simulator.mark_agent_empty(self)
             self._move_to_end_intersection()
             return
 
@@ -295,6 +296,7 @@ class AgentEvent(Event):
             if self._is_on_same_road(
                 self.loc, self.assigned_resource.pickup_loc
             ) and self.loc.upstream_to(self.assigned_resource.pickup_loc):
+                # Reach resource pickup location before reach the end intersection
                 travel_time = (
                     self.fleet_manager.traffic_pattern.road_forward_travel_time(
                         self.time, self.loc, self.assigned_resource.pickup_loc
@@ -314,7 +316,6 @@ class AgentEvent(Event):
             agent_event = self.simulator.agent_map.get(action.agent_id)
             agent_event.assign_to(resource_event, self.time)
             resource_event.assign_to(agent_event)
-            self._unassign_resource()
             self._move_to_end_intersection()
 
     def _move_to_end_intersection(self) -> None:
@@ -356,6 +357,7 @@ class AgentEvent(Event):
 
         agent_event = self.simulator.agent_map.get(agent_action.agent_id)
         res_event = self.simulator.res_map.get(agent_action.res_id)
+
         return (
             agent_event is not None
             and res_event is not None
