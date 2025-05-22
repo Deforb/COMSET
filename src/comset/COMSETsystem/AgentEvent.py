@@ -316,9 +316,22 @@ class AgentEvent(Event):
             agent_event = self.simulator.agent_map.get(action.agent_id)
             agent_event.assign_to(resource_event, self.time)
             resource_event.assign_to(agent_event)
+
             self._move_to_end_intersection()
 
     def _move_to_end_intersection(self) -> None:
+        # 首先检查当前位置是否已经在道路末端
+        if self.loc.at_end_intersection():
+            # 如果已经在末端，直接进入下一个状态
+            self._update(
+                self.time,
+                self.loc,
+                AgentEvent.State.INTERSECTION_REACHED,
+                self.time,
+                self.loc,
+            )
+            return
+
         travel_time = (
             self.fleet_manager.traffic_pattern.road_travel_time_to_end_intersection(
                 self.time, self.loc
