@@ -156,7 +156,7 @@ class CityMap:
         }
 
         # 准备处理数据
-        process_items = [
+        process_items: List[Tuple] = [
             (source.id, source.path_table_index, road_data) for source in sources
         ]
 
@@ -168,8 +168,7 @@ class CityMap:
         )
 
         # 将结果填入路径表
-        for i, result in enumerate(results):
-            source = sources[i]
+        for source, result in zip(sources, results):
             path_table[source.path_table_index] = result
 
         # 使路径表不可修改
@@ -198,7 +197,7 @@ class CityMap:
 
         # 创建队列条目
         queue_entries = {
-            node_id: {'cost': float('inf'), 'in_queue': True}
+            node_id: {"cost": float("inf"), "in_queue": True}
             for node_id in road_data.keys()
         }
 
@@ -215,7 +214,7 @@ class CityMap:
                     break
 
         # 设置源节点
-        queue_entries[source_id]['cost'] = 0.0
+        queue_entries[source_id]["cost"] = 0.0
         path_table_row[source_idx] = PathTableEntry(0.0, source_idx)
 
         # 使用列表模拟堆
@@ -223,17 +222,17 @@ class CityMap:
 
         while heap:
             current_cost, current_id = heapq.heappop(heap)
-            if not queue_entries[current_id]['in_queue']:
+            if not queue_entries[current_id]["in_queue"]:
                 continue
-            queue_entries[current_id]['in_queue'] = False
+            queue_entries[current_id]["in_queue"] = False
 
             for neighbor_id, neighbor_idx, travel_time in road_data[current_id]:
-                if not queue_entries[neighbor_id]['in_queue']:
+                if not queue_entries[neighbor_id]["in_queue"]:
                     continue
 
                 new_cost = current_cost + travel_time
-                if new_cost < queue_entries[neighbor_id]['cost']:
-                    queue_entries[neighbor_id]['cost'] = new_cost
+                if new_cost < queue_entries[neighbor_id]["cost"]:
+                    queue_entries[neighbor_id]["cost"] = new_cost
                     current_idx = node_to_index[current_id]
                     path_table_row[neighbor_idx] = PathTableEntry(new_cost, current_idx)
                     heapq.heappush(heap, (new_cost, neighbor_id))
@@ -358,9 +357,9 @@ class CityMap:
                 intersections_copy[from_id].roads_map_from[
                     intersections_copy[to_id]
                 ] = new_road
-                intersections_copy[to_id].roads_map_to[
-                    intersections_copy[from_id]
-                ] = new_road
+                intersections_copy[to_id].roads_map_to[intersections_copy[from_id]] = (
+                    new_road
+                )
 
         # Create roads list
         roads_copy: List[Road] = []

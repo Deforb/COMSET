@@ -51,26 +51,26 @@ class Configuration:
         return cls._instance
 
     def __init__(self, **kwargs):
-        self.fleet_manager_class = kwargs["fleet_manager_class"]
+        self.fleet_manager_class: FleetManager = kwargs["fleet_manager_class"]
 
-        self.map_json_file = kwargs["map_json_file"]
-        self.resource_file = kwargs["resource_file"]
-        self.number_of_agents = kwargs["number_of_agents"]
-        self.bounding_polygon_kml_file = kwargs["bounding_polygon_kml_file"]
-        self.resource_maximum_life_time = (
+        self.map_json_file: str = kwargs["map_json_file"]
+        self.resource_file: str = kwargs["resource_file"]
+        self.number_of_agents: int = kwargs["number_of_agents"]
+        self.bounding_polygon_kml_file: str = kwargs["bounding_polygon_kml_file"]
+        self.resource_maximum_life_time: int = (
             kwargs["resource_maximum_life_time"] * self.TIME_RESOLUTION
         )
-        self.agent_placement_seed = kwargs["agent_placement_seed"]
-        self.dynamic_traffic_enabled = kwargs["dynamic_traffic"]
+        self.agent_placement_seed: int = kwargs["agent_placement_seed"]
+        self.dynamic_traffic_enabled: bool = kwargs["dynamic_traffic"]
 
-        self.traffic_pattern_epoch = (
+        self.traffic_pattern_epoch: int = (
             kwargs["traffic_pattern_epoch"] * self.TIME_RESOLUTION
         )
-        self.traffic_pattern_step = (
+        self.traffic_pattern_step: int = (
             kwargs["traffic_pattern_step"] * self.TIME_RESOLUTION
         )
 
-        self.map = self._make_city_map()
+        self.map: CityMap = self._make_city_map()
 
         # Pre-compute shortest travel times between all pairs of intersections.
         print("Pre-computing all pair travel times...")
