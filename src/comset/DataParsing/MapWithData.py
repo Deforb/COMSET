@@ -16,6 +16,7 @@ from comset.utils.parallel_processor import ParallelProcessor
 
 if TYPE_CHECKING:
     from COMSETsystem.CityMap import CityMap
+    from COMSETsystem.Event import Event
     from DataParsing.Resource import Resource
     from COMSETsystem.Simulator import Simulator
     from COMSETsystem.FleetManager import FleetManager
@@ -34,7 +35,7 @@ class MapWithData:
         self.agent_placement_random_seed: int = (
             agent_placement_random_seed  # 代理放置随机种子
         )
-        self.events: List[ResourceEvent] = []  # 事件优先队列（使用heapq模拟）
+        self.events: List[Event] = []  # 事件优先队列（使用heapq模拟）
         self.zone_id: int = map.compute_zone_id()  # 时区信息
         self.resources_parsed: List[Resource] = []  # 解析后的资源列表
         self.earliest_resource_time: int = sys.maxsize  # 最早资源出现时间
@@ -114,7 +115,7 @@ class MapWithData:
                 )
 
             self.events = events_list
-            heapq.heapify(self.events)
+            # heapq.heapify(self.events)
 
         except Exception:
             import traceback
@@ -204,6 +205,7 @@ class MapWithData:
         deploy_time = self.earliest_resource_time - 1
         generator = random.Random(self.agent_placement_random_seed)
 
+        events_list: List[AgentEvent] = []
         for _ in range(number_of_agents):
             road_id = generator.randint(0, len(self.map.roads) - 1)
             road = self.map.roads[road_id]
@@ -212,10 +214,13 @@ class MapWithData:
 
             ev = AgentEvent(location, deploy_time, simulator, fleetManager)
             simulator.mark_agent_empty(ev)
-            heapq.heappush(self.events, ev)
+            # heapq.heappush(self.events, ev)
+
+        self.events.extend(events_list)
 
     # 获取事件队列
     def get_events(self) -> list:
+        heapq.heapify(self.events)
         return self.events
 
     def build_sliding_traffic_pattern(
@@ -237,16 +242,17 @@ class MapWithData:
         In other words, we adjust the travel speeds so that the average trip time produced by COMSET is consistent with that of the real data.
 
         Args:
-            resources set of resources that will be used to compute speed factors.
-            epoch the window of time that determines the speed factor
-            step the resolution of the time-of-day speed dependence.
-            dynamicTraffic true if we will be simulated with time-of-day dependent traffic.
+            resources: set of resources that will be used to compute speed factors.
+            epoch: the window of time that determines the speed factor
+            step: the resolution of the time-of-day speed dependence.
+            dynamicTraffic: true if we will be simulated with time-of-day dependent traffic.
 
         Return:
             traffic pattern
         """
 
         # sort resources by pickup
+        n = len(resources)
         resources.sort(key=lambda r: r.time)
         traffic_pattern = TrafficPattern(step)
         epoch_begin_time = resources[0].pickup_time
@@ -259,7 +265,7 @@ class MapWithData:
             resource_index = begin_resource_index
 
             while (
-                resource_index < len(resources)
+                resource_index < n
                 and resources[resource_index].pickup_time < epoch_end_time
             ):
                 if resources[resource_index].dropoff_time < epoch_end_time:
@@ -267,36 +273,29 @@ class MapWithData:
                 resource_index += 1
 
             if not dynamicTraffic:
-                traffic_pattern.add_traffic_pattern_item(
-                    epoch_begin_time, speed_factor=1.0
-                )
+                speed_factor = 1.0
             else:
                 if not epoch_resources:
                     # use the previous epoch if available
-                    traffic_pattern.add_traffic_pattern_item(
-                        epoch_begin_time, last_known_speed_factor
-                    )
+                    speed_factor = last_known_speed_factor
                 else:
                     speed_factor = self.get_speed_factor(epoch_resources)
-                    if speed_factor < 0:  # didn't get a valid speed factor
-                        traffic_pattern.add_traffic_pattern_item(
-                            epoch_begin_time, last_known_speed_factor
-                        )
-                    else:
-                        speed_factor = min(speed_factor, 1.0)  # cap speed factor to 1
-                        traffic_pattern.add_traffic_pattern_item(
-                            epoch_begin_time, speed_factor
-                        )
+                    if speed_factor >= 0:  # cap speed factor to 1
+                        speed_factor = min(speed_factor, 1.0)
                         last_known_speed_factor = speed_factor
+                    else:  # didn't get a valid speed factor
+                        speed_factor = last_known_speed_factor
+
+            traffic_pattern.add_traffic_pattern_item(epoch_begin_time, speed_factor)
 
             epoch_begin_time += step
             while (
-                begin_resource_index < len(resources)
+                begin_resource_index < n
                 and resources[begin_resource_index].pickup_time < epoch_begin_time
             ):
                 begin_resource_index += 1
 
-            if resource_index >= len(resources):
+            if resource_index >= n:
                 break
 
         return traffic_pattern

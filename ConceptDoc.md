@@ -1,5 +1,7 @@
 # GISCUP 2020 Concept Design
+
 ## Background
+
 In 2020 GISCUP will build upon GISCUP 2019.
 Specifically GISCUP 2020 extends the original, with several new twists:
 
@@ -33,6 +35,7 @@ An `AgentEvent` implements its associated `Agent`'s behavior;
 a `ResourceEvent` implements a customer's behavior.
 
 ### Types of `AgentEvent`
+
 Two `AgentEvent` types models the behavior of an agent. Each AgentEvent is
 associated with an agent, represented by an instance of a
  contestant-supplied subclass of `BaseAgent`. The agent performs
@@ -53,11 +56,12 @@ an agent's scheduled `INTERSECTION_REACHED` event, and scheduling a
 `DROPPING_OFF` event for the agent.
 
 ### States of `ResourceEvent`
+
 Two `ResourceEvent` types are used to model a resource or a customer.
 Not there is no corresponding `Resource` class.
 
 1. `BECOME_AVAILABLE` represents the event of a resource looking for a ride.
-The handler searches for the *closest* cruising agent, one that can reach the
+The handler searches for the _closest_ cruising agent, one that can reach the
 pick up point the soonest.
 Once identified the agent is interrrupted by descheduling its next
 `INTERSECTION_REACHED` event and scheduling a `DROPPING_OFF` event
@@ -70,6 +74,7 @@ before its maxiumum life time expires.
 Contestants are penalized for expired resources.
 
 ### Representation of an Agent
+
 An agent is represented by two classes `AgentEvent` and `Agent`.
 The event class models the behavior.
 The contestants supplies their own `Agent` class by deriving the
@@ -96,13 +101,14 @@ the route from pick-up to drop-off is not fully simulated.
 Instead the simulator just jumps time forward for the agent
 from pick-up to drop-off, where time is the travel time of
 the shortest path between pick-up and drop-off.
-In 2020 simulation of all travels will be simulated road segment 
+In 2020 simulation of all travels will be simulated road segment
 by road segment to
 implement dynamic travel time.
 
 ### Proposals for Implementation
 
 #### Remove `BaseAgent`
+
 Much of `BaseAgent`'s functionality will have been supplanted by
 `BaseFleetManager`.
 We will identify an agent to the Flee tManager by index.
@@ -120,10 +126,10 @@ on which its associating resource is to be dropped-off,
 its next event will be of type `DROP_OFF`
 
 * `PICK_UP` The agent travels to its designated pick up point on the segment
-and *picks up* the resource, and its next event will be of type `TRAVELLING`
+and _picks up_ the resource, and its next event will be of type `TRAVELLING`
 
 * `DROP_OFF` The agent travels to its designated rop off point on the segment
-and *drops off* the resource, and its next event will be of type `TRAVELLING`
+and _drops off_ the resource, and its next event will be of type `TRAVELLING`
 
 #### Add corresponding event types for `ResourceEvent`
 
@@ -137,6 +143,7 @@ interval (maybe 10 minutes) until assigned.
 removed from the system.
 
 #### Dynamic Traffic Speeds
+
 The travel speed at a road segment will be updated every Q minutes (e.g., N=15) during a simulation. The travel speed is computed based on the road segment's speed limit and the TLC Trip Record data to reflect the traffic condition over the time of a day. The calibration goes as follows.
 
 1. Compute the average trip duration of all trips recorded in the TLC Trip Record data that fall into the current Q-minute interval; call it the `TLC_average_trip_duration`.

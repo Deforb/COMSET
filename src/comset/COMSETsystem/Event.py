@@ -1,6 +1,6 @@
 from __future__ import annotations
 from abc import ABC, abstractmethod
-from typing import Optional, TypeVar, TYPE_CHECKING
+from typing import Optional, TypeVar, TYPE_CHECKING, override
 
 if TYPE_CHECKING:
     from COMSETsystem.Simulator import Simulator
@@ -59,6 +59,7 @@ class Event(ABC):
     def id(self, value: int) -> None:
         self._id = value
 
+    @override
     def __lt__(self, other: "Event") -> bool:
         """
         To be used by the PriorityQueue to order the Events
@@ -75,8 +76,7 @@ class Event(ABC):
             if self.id != other.id:
                 return self.id < other.id
             else:
-                print("Duplicate event exception")
-                exit(1)
+                assert False, "Duplicate event exception"
         else:
             # if not same type, agent should be processed first
             return self.__class__.__name__ == "AgentEvent"
@@ -92,5 +92,13 @@ class Event(ABC):
         Note: Should never change the time when the event is on the simulator queue!
         """
         if hasattr(self, "simulator") and self.simulator is not None:
-            assert not self.simulator.has_event(self)
+            in_queue = self.simulator.has_event(self)
+            print(
+                f"Event {self.id} time setter: in_queue={in_queue}, old_time={self._time}, new_time={value}"
+            )
+            assert not in_queue
         self._time = value
+
+    @override
+    def __str__(self) -> str:
+        return f"{self.__class__.__name__} {self.id} at time {self.time}"

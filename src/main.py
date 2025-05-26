@@ -7,7 +7,7 @@ from comset.COMSETsystem.Configuration import Configuration
 from comset.COMSETsystem.Simulator import Simulator
 
 
-def main():
+def main() -> None:
     # 配置日志
     logging.basicConfig(level=logging.INFO)
 

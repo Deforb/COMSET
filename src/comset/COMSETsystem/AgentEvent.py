@@ -173,9 +173,9 @@ class AgentEvent(Event):
             )
 
         if next_intersection is None:
-            raise Exception("FleetManager did not return a next location")
+            raise RuntimeError("FleetManager did not return a next location")
         if not self.loc.road.to.is_adjacent(next_intersection):
-            raise Exception("move not made to an adjacent location")
+            raise RuntimeError("move not made to an adjacent location")
 
         # set location and time of the next trigger
         next_road = self.loc.road.to.road_to(next_intersection)

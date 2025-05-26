@@ -107,7 +107,7 @@ class ParallelProcessor:
             with Pool(n_jobs) as pool:
                 if show_progress:
                     with tqdm(total=len(items), desc=desc) as pbar:
-                        results = []
+                        results: List[R] = []
                         # 使用 imap_unordered 提升效率，不保证顺序
                         for result in pool.imap_unordered(
                             partial(
@@ -118,7 +118,6 @@ class ParallelProcessor:
                         ):
                             results.append(result)
                             pbar.update(1)
-                            pbar.refresh()  # 强制刷新进度条
                         return results
                 else:
                     return pool.starmap(process_func, items, chunksize=chunk_size)

@@ -50,8 +50,16 @@ class Simulator:
             return self.time
 
     def __init__(self, config: Configuration):
-        self.configuration = config
+        """
+        Constructor of the class Main. This is made such that the type of
+        agent/resourceAnalyzer used is not hardcoded and the users can choose
+        whichever they want.
+        """
+        self.configuration: Configuration = config
         self.map: Optional[CityMap] = None
+
+        # A deep copy of map to be passed to agents.
+        # This is a way to make map unmodifiable.
         self.map_for_agents: Optional[CityMap] = None
         self.events: List[Event] = []
         self.empty_agents: Set[AgentEvent] = set()
@@ -60,6 +68,9 @@ class Simulator:
         self.simulation_time: int = 0
         self.simulation_end_time: int = 0
         self.score: Optional[ScoreInfo] = None
+
+        # A list of all the agents in the system. Not really used in COMSET, but maintained for
+        # a user's debugging purposes.
         self.agents: List[BaseAgent] = []
         self.fleet_manager: Optional[FleetManager] = None
         self.traffic_pattern: Optional[TrafficPattern] = None
@@ -67,7 +78,7 @@ class Simulator:
         self.res_map: Dict[int, ResourceEvent] = {}
         self.configure()
 
-    def configure(self):
+    def configure(self) -> None:
         """
         Configure the simulation system including:
 
@@ -77,7 +88,6 @@ class Simulator:
 
         See COMSETsystem.Configuration and Main.java for detailed description of the parameters.
         """
-
         self.map = self.configuration.map
 
         # Make a map copy for agents to use so that an agent cannot modify the map used by the simulator
@@ -116,7 +126,7 @@ class Simulator:
 
         # Initialize the event queue.
         self.events = map_wd.get_events()
-        heapq.heapify(self.events)
+        # heapq.heapify(self.events)
 
         self.mapping_event_id()
 
@@ -146,7 +156,12 @@ class Simulator:
             with tqdm(total=100, desc="Progress") as pbar:
                 while self.events:
                     event = heapq.heappop(self.events)
-                    self.simulation_time = event.time
+                    assert event is not None, "event is None"
+                    next_time = event.time
+                    assert next_time >= self.simulation_time, (
+                        "event.time is less than simulation_time"
+                    )
+                    self.simulation_time = next_time
 
                     # Extend total simulation time for agent which is still delivering resource
                     total_simulation_time = max(
@@ -154,13 +169,19 @@ class Simulator:
                         self.simulation_time - self.simulation_start_time,
                     )
 
+                    print(f"next_time: {next_time}")
+                    print(f"self.simulation_time: {self.simulation_time}")
+                    print(f"total_simulation_time: {total_simulation_time}")
+                    print(f"self.simulation_start_time: {self.simulation_start_time}")
+                    print(f"self.simulation_end_time: {self.simulation_end_time}")
+
                     # Update progress bar
                     if total_simulation_time > 0:
                         progress = min(
-                            (event.time - self.simulation_start_time)
+                            (next_time - self.simulation_start_time)
                             / total_simulation_time
                             * 100,
-                            100
+                            100,
                         )
                         pbar.update(progress - pbar.n)
 
@@ -173,10 +194,7 @@ class Simulator:
                             if new_event:
                                 self.add_event(new_event)
                         except Exception as e:
-                            print(f"事件触发失败: {str(e)}")
-                            print(f"事件类型: {type(event).__name__}")
-                            print(f"事件ID: {event.id}")
-                            print(f"事件时间: {event.time}")
+                            print(f"事件{event}触发失败: {str(e)}")
                             raise e
 
         except Exception as e:
