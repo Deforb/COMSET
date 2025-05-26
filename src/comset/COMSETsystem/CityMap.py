@@ -1,11 +1,11 @@
 from __future__ import annotations
-import heapq
 import logging
 from collections import deque
 from typing import Dict, List, Optional, Tuple, Deque, Union, TYPE_CHECKING
 from dataclasses import dataclass
 from zoneinfo import ZoneInfo
 
+from heapdict import heapdict
 from timezonefinder import TimezoneFinder
 
 from comset.COMSETsystem.LocationOnRoad import LocationOnRoad
@@ -142,22 +142,43 @@ class CityMap:
         计算所有节点对之间的最短路径时间。
         使用Dijkstra算法，通过进程池实现并行计算。
         """
-        n = len(self.intersections)
+        # 获取所有节点并建立全局索引映射
+        sources = list(self.intersections.values())
+        all_nodes: set[int] = {i.id for i in sources}
+        for inter in sources:
+            for road in inter.get_roads_from():
+                all_nodes.add(road.to.id)
+
+        # 建立全局节点ID到索引的映射
+        node_to_index: Dict[int, int] = {
+            node_id: idx for idx, node_id in enumerate(sorted(all_nodes))
+        }
+        n = len(node_to_index)
+
+        # 初始化路径表
         path_table = [[None] * n for _ in range(n)]
 
-        # 准备源节点列表和必要的数据
-        sources = list(self.intersections.values())
-        road_data = {
-            source.id: [
-                (road.to.id, road.to.path_table_index, road.travel_time)
-                for road in source.get_roads_from()
-            ]
-            for source in sources
-        }
+        # 准备道路数据（包含完整索引信息）
+        road_data: dict[int, list] = {}
+        for source in sources:
+            roads: list[int, int, float] = []
+            for road in source.get_roads_from():
+                # 确保所有邻居节点都有索引
+                if road.to.id not in node_to_index:
+                    node_to_index[road.to.id] = len(node_to_index)
+                roads.append(
+                    (
+                        road.to.id,
+                        node_to_index[road.to.id],  # 使用全局索引
+                        road.travel_time,
+                    )
+                )
+            road_data[source.id] = roads
 
-        # 准备处理数据
+        # 准备并行处理参数
         process_items: List[Tuple] = [
-            (source.id, source.path_table_index, road_data) for source in sources
+            (source.id, node_to_index[source.id], road_data, node_to_index)
+            for source in sources
         ]
 
         # 使用ParallelProcessor进行并行计算
@@ -168,8 +189,8 @@ class CityMap:
         )
 
         # 将结果填入路径表
-        for source, result in zip(sources, results):
-            path_table[source.path_table_index] = result
+        for idx, result in enumerate(results):
+            path_table[idx] = result
 
         # 使路径表不可修改
         self._make_path_table_unmodifiable(path_table)
@@ -179,6 +200,7 @@ class CityMap:
         source_id: int,
         source_idx: int,
         road_data: Dict[int, List[Tuple[int, int, float]]],
+        node_to_index: Dict[int, int],
     ) -> List[Optional[PathTableEntry]]:
         """
         计算从给定源节点到所有其他节点的最短路径。
@@ -188,54 +210,41 @@ class CityMap:
             source_id: 源节点ID
             source_idx: 源节点路径表索引
             road_data: 道路数据，格式为 {node_id: [(neighbor_id, neighbor_idx, travel_time), ...]}
+            node_to_index: 节点ID到路径表索引的映射
 
         Returns:
             包含从源节点到所有其他节点的最短路径信息的列表
         """
-        n = len(road_data)  # 节点数量等于road_data的长度
+        n = len(node_to_index)  # 节点数量等于road_data的长度
+
+        # 初始化距离字典和优先队列
         path_table_row = [None] * n
-
-        # 创建队列条目
-        queue_entries = {
-            node_id: {"cost": float("inf"), "in_queue": True}
-            for node_id in road_data.keys()
-        }
-
-        # 创建节点ID到路径表索引的映射
-        node_to_index = {}
-        for node_id, neighbors in road_data.items():
-            # 找到当前节点作为邻居时的索引
-            for other_id, other_neighbors in road_data.items():
-                for neighbor_id, neighbor_idx, _ in other_neighbors:
-                    if neighbor_id == node_id:
-                        node_to_index[node_id] = neighbor_idx
-                        break
-                if node_id in node_to_index:
-                    break
-
-        # 设置源节点
-        queue_entries[source_id]["cost"] = 0.0
         path_table_row[source_idx] = PathTableEntry(0.0, source_idx)
 
-        # 使用列表模拟堆
-        heap = [(0.0, source_id)]
+        distance = {node_id: float("inf") for node_id in node_to_index}
+        distance[source_id] = 0.0
+
+        heap = heapdict()
+        for node_id in node_to_index:
+            heap[node_id] = distance[node_id]
 
         while heap:
-            current_cost, current_id = heapq.heappop(heap)
-            if not queue_entries[current_id]["in_queue"]:
+            current_id, current_dist = heap.popitem()
+            if current_dist > distance[current_id]:
                 continue
-            queue_entries[current_id]["in_queue"] = False
 
+            current_idx = node_to_index[current_id]
+
+            # 遍历所有出边
             for neighbor_id, neighbor_idx, travel_time in road_data[current_id]:
-                if not queue_entries[neighbor_id]["in_queue"]:
-                    continue
+                if neighbor_id not in distance:
+                    continue  # 忽略无效节点
 
-                new_cost = current_cost + travel_time
-                if new_cost < queue_entries[neighbor_id]["cost"]:
-                    queue_entries[neighbor_id]["cost"] = new_cost
-                    current_idx = node_to_index[current_id]
-                    path_table_row[neighbor_idx] = PathTableEntry(new_cost, current_idx)
-                    heapq.heappush(heap, (new_cost, neighbor_id))
+                new_dist: float = current_dist + travel_time
+                if new_dist < distance[neighbor_id]:
+                    distance[neighbor_id] = new_dist
+                    path_table_row[neighbor_idx] = PathTableEntry(new_dist, current_idx)
+                    heap[neighbor_id] = new_dist
 
         return path_table_row
 
@@ -243,19 +252,11 @@ class CityMap:
         self, path_table: List[List[Optional[PathTableEntry]]]
     ) -> None:
         """Make a path table unmodifiable."""
-        # Create the final immutable structure more directly
-        # The map() function applies tuple() to each sublist in path_table,
-        # and the outer tuple() converts the resulting iterator of tuples into a single tuple of tuples.
-        # This can be slightly more memory-efficient and faster than list comprehensions for this specific case.
         self.immutable_path_table = tuple(map(tuple, path_table))
 
-        # Clear the original mutable structure (matching Java behavior)
-        # This is done to free up memory, as path_table can be large.
-        # It's important that path_table is fully iterated by map() before clearing.
-        # Since the outer tuple() consumes the iterator returned by map(), this sequence is safe.
-        for row in path_table:  # path_table here is the original list of lists
-            row.clear()  # Clears each inner list (which were converted to tuples)
-        path_table.clear()  # Clears the outer list itself
+        for row in path_table:
+            row.clear()
+        path_table.clear()
 
     def shortest_travel_time_path(
         self, source: Intersection, destination: Intersection

@@ -3,7 +3,7 @@ import heapq
 import random
 import math
 import sys
-from typing import List, TYPE_CHECKING, Tuple, Optional, Dict
+from typing import List, TYPE_CHECKING
 from tqdm import tqdm
 
 from comset.DataParsing.CSVNewYorkParser import CSVNewYorkParser
@@ -12,7 +12,7 @@ from comset.COMSETsystem.AgentEvent import AgentEvent
 from comset.COMSETsystem.ResourceEvent import ResourceEvent
 from comset.COMSETsystem.LocationOnRoad import LocationOnRoad
 from comset.COMSETsystem.TrafficPattern import TrafficPattern
-from comset.utils.parallel_processor import ParallelProcessor
+# from comset.utils.parallel_processor import ParallelProcessor
 
 if TYPE_CHECKING:
     from COMSETsystem.CityMap import CityMap
@@ -72,7 +72,7 @@ class MapWithData:
             for resource in tqdm(
                 self.resources_parsed, desc="map-matching resources", mininterval=1
             ):
-                #  map matching
+                # map matching
                 pickup_match: LocationOnRoad = self.map_match(
                     resource.pickup_lon, resource.pickup_lat
                 )
