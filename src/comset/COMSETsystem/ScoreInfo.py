@@ -137,11 +137,10 @@ class ScoreInfo:
             # searching until the end of the simulation should be counted toward the total search time.
             # FIXME: Move this loop into the simulator and just add the time to totalAgentSearchTime and increment
             # totalSearches.  This will allow us to make emptyAgents private.
-            total_remain_time = 0
-            for agent_event in self.simulator.empty_agents:
-                total_remain_time += (
-                    self.simulator.simulation_end_time - agent_event.start_search_time
-                )
+            total_remain_time = sum(
+                self.simulator.simulation_end_time - agent_event.start_search_time
+                for agent_event in self.simulator.empty_agents
+            )
 
             avg_search_time = self.configuration.to_seconds(
                 self.total_agent_search_time + total_remain_time

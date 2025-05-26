@@ -146,14 +146,15 @@ class Simulator:
         try:
             initial_time = heapq.nsmallest(1, self.events, key=lambda e: e.time)[
                 0
-            ].time  # TODO:events[0].time
+            ].time  # TODO: events[0].time
             self.simulation_start_time = self.simulation_time = initial_time
             total_simulation_time = (
                 self.simulation_end_time - self.simulation_start_time
             )
+            assert total_simulation_time > 0, "total_simulation_time is less than 0"
             print(f"总模拟时间: {total_simulation_time}")
 
-            with tqdm(total=100, desc="Progress") as pbar:
+            with tqdm(total=100, desc="Progress", mininterval=1, unit="event") as pbar:
                 while self.events:
                     event = heapq.heappop(self.events)
                     assert event is not None, "event is None"
@@ -169,21 +170,14 @@ class Simulator:
                         self.simulation_time - self.simulation_start_time,
                     )
 
-                    print(f"next_time: {next_time}")
-                    print(f"self.simulation_time: {self.simulation_time}")
-                    print(f"total_simulation_time: {total_simulation_time}")
-                    print(f"self.simulation_start_time: {self.simulation_start_time}")
-                    print(f"self.simulation_end_time: {self.simulation_end_time}")
-
                     # Update progress bar
-                    if total_simulation_time > 0:
-                        progress = min(
-                            (next_time - self.simulation_start_time)
-                            / total_simulation_time
-                            * 100,
-                            100,
-                        )
-                        pbar.update(progress - pbar.n)
+                    progress = min(
+                        (next_time - self.simulation_start_time)
+                        / total_simulation_time
+                        * 100,
+                        100,
+                    )
+                    pbar.update(progress - pbar.n)
 
                     if (
                         self.simulation_time <= self.simulation_end_time

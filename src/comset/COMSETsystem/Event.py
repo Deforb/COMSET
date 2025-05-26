@@ -92,11 +92,7 @@ class Event(ABC):
         Note: Should never change the time when the event is on the simulator queue!
         """
         if hasattr(self, "simulator") and self.simulator is not None:
-            in_queue = self.simulator.has_event(self)
-            print(
-                f"Event {self.id} time setter: in_queue={in_queue}, old_time={self._time}, new_time={value}"
-            )
-            assert not in_queue
+            assert not self.simulator.has_event(self)
         self._time = value
 
     @override
