@@ -9,6 +9,11 @@ if TYPE_CHECKING:
 
 
 class Configuration:
+    """
+    Class to hold the configuration parameters of the simulation. Call static method Configuration.make() first to
+    create a singleton configuration object, then call Configuration.get() to retrieve the singleton.
+    """
+
     _instance = None
 
     TIME_RESOLUTION = 1000000
@@ -51,14 +56,29 @@ class Configuration:
         return cls._instance
 
     def __init__(self, **kwargs):
+        # A class that extends BaseAgent and implements a search routing strategy
         self.fleet_manager_class: FleetManager = kwargs["fleet_manager_class"]
 
+        # Full path to an OSM JSON map file
         self.map_json_file: str = kwargs["map_json_file"]
+
+        # Full path to a TLC New York Yellow trip record file
         self.resource_file: str = kwargs["resource_file"]
+
+        # FIXME: The field numberOfAgents should be protected or private. Most code, beside agent creation and placement
+        # code don't need to know its value. Also the field dynamicTraffic should also be hidden.
+        # The number of agents that are deployed (at the beginning of the simulation).
         self.number_of_agents: int = kwargs["number_of_agents"]
+
+        # Full path to a KML defining the bounding polygon to crop the map
         self.bounding_polygon_kml_file: str = kwargs["bounding_polygon_kml_file"]
+
+        # Members accessible from COMSETsystem, hidden from others, i.e. they have no business knowing them.
+        self.resource_maximum_life_time_in_seconds: int = kwargs[
+            "resource_maximum_life_time"
+        ]
         self.resource_maximum_life_time: int = (
-            kwargs["resource_maximum_life_time"] * self.TIME_RESOLUTION
+            self.resource_maximum_life_time_in_seconds * self.TIME_RESOLUTION
         )
         self.agent_placement_seed: int = kwargs["agent_placement_seed"]
         self.dynamic_traffic_enabled: bool = kwargs["dynamic_traffic"]
@@ -70,6 +90,7 @@ class Configuration:
             kwargs["traffic_pattern_step"] * self.TIME_RESOLUTION
         )
 
+        # The map that everything will happen on.
         self.map: CityMap = self._make_city_map()
 
         # Pre-compute shortest travel times between all pairs of intersections.

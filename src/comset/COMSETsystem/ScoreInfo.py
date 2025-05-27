@@ -119,7 +119,7 @@ class ScoreInfo:
         print(f"Number of agents: {self.configuration.number_of_agents}")
         print(f"Number of resources: {self.total_resources}")
         print(
-            f"Resource Maximum Life Time: {self.configuration.resource_maximum_life_time} seconds"
+            f"Resource Maximum Life Time: {self.configuration.resource_maximum_life_time_in_seconds} seconds"
         )
         print(f"Fleet Manager class: {self.configuration.fleet_manager_class}")
         print(f"Time resolution: {self.configuration.TIME_RESOLUTION}")

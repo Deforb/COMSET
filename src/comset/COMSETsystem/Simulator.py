@@ -99,7 +99,6 @@ class Simulator:
             self.configuration.agent_placement_seed,
         )
 
-        print("Loading and map-matching resources...")
         self.fleet_manager = self.create_fleet_manager()
 
         # The simulation end time is the expiration time of the last resource.
