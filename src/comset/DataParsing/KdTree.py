@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Optional, TYPE_CHECKING
+from typing import Tuple, Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from ..COMSETsystem.Link import Link
@@ -134,65 +134,96 @@ class KdTree:
         return node
 
     def nearest(self, p: Optional[Point2D]) -> Optional[Link]:
-        if p is None:
-            raise ValueError("called nearest() with a null Point2D")
-        if self.is_empty():
+        """
+        Finds the nearest Link to a given Point2D in the KdTree.
+
+        Args:
+            p (Optional[Point2D]): The point for which to find the nearest link.
+
+        Returns:
+            Optional[Link]: The nearest Link to the point, or None if the tree is empty or p is None.
+        """
+        if self.is_empty() or p is None:
             return None
-        return self._nearest(self.root, p, self.root.link, True)
+
+        initial_champion = self.root.link
+        initial_champion_dist_sq = initial_champion.distance_sq(p)
+
+        best_link, _ = self._nearest(
+            self.root, p, initial_champion, initial_champion_dist_sq, True
+        )
+        return best_link
 
     def _nearest(
-        self, node: Optional[Node], p: Point2D, champion: Link, even_level: bool
-    ) -> Link:
+        self,
+        node: "Node",
+        p: Point2D,
+        champion: Link,
+        champion_dist_sq: float,
+        even_level: bool,
+    ) -> Tuple[Link, float]:
+        """
+        Recursively finds the nearest Link to a given Point2D in the KdTree.
 
-        # Handle reaching the end of the tree
+        Args:
+            node (Node): The current node being evaluated.
+            p (Point2D): The point for which to find the nearest link.
+            champion (Link): The current best candidate for the nearest link.
+            champion_dist_sq (float): The squared distance to the current champion.
+
+        Returns:
+            Tuple[Link, float]: A tuple containing the nearest Link and its squared distance.
+        """
+        # Base case: leaf node reached or empty subtree
         if node is None:
-            return champion
+            return champion, champion_dist_sq
 
-        # Determine if the current Node's link beats the existing champion
-        current_dist = node.link.distance_sq(p)
-        champion_dist = champion.distance_sq(p)
-        new_champion = node.link if current_dist < champion_dist else champion
+        # Calculate distance for current node's link to point p
+        current_node_link_dist_sq = node.link.distance_sq(p)
 
-        """
-        Calculate the distance from the search point to the current
-        Node's partition band.
-        
-        Primarily, the sign of this calculation is useful in determining
-        which side of the Node to traverse next.
-        
-        Additionally, the magnitude to toPartitionLine is useful for pruning.
-        
-        Specifically, if we find a champion whose distance is shorter than
-        to a previous partition band, then we know we don't have to check any
-        of the links on the other side of that partition band, because none
-        can be closer.
-        """
-        to_partition_line = self._distance_point_to_band(p, node, even_level)
-
-        if to_partition_line < 0:
-            # Handle the search point being to the left of or below
-            # the current Node's partition band.
-            new_champion = self._nearest(node.lb, p, new_champion, not even_level)
-
-            # Since champion may have changed, recalculate distance
-            if new_champion.distance_sq(p) >= (to_partition_line**2):
-                new_champion = self._nearest(node.rt, p, new_champion, not even_level)
+        # Determine if the current Node's link is a better champion
+        if current_node_link_dist_sq < champion_dist_sq:
+            current_champion = node.link
+            current_champion_dist_sq = current_node_link_dist_sq
         else:
-            # Handle the search link being to the right of or above
-            # the current Node's partition band.
-            #
-            # Note that, since insert() above breaks link comparison ties
-            # by placing the inserted link on the right branch of the current
-            # Node, traversal must also break ties by going to the right branch
-            # of the current Node (i.e. to the right or top, depending on
-            # the level of the current Node).
-            new_champion = self._nearest(node.rt, p, new_champion, not even_level)
+            current_champion = champion
+            current_champion_dist_sq = champion_dist_sq
 
-            # Since champion may have changed, recalculate distance
-            if new_champion.distance_sq(p) >= (to_partition_line**2):
-                new_champion = self._nearest(node.lb, p, new_champion, not even_level)
+        # Determine signed distance to the relevant edge of the current node's partition band.
+        # This value's sign determines the primary search direction.
+        # Its square is used for pruning the secondary branch, maintaining original pruning logic.
+        to_relevant_band_edge_signed = self._distance_point_to_band(p, node, even_level)
 
-        return new_champion
+        # Determine primary and secondary branches for traversal
+        if (
+            to_relevant_band_edge_signed < 0
+        ):  # Point is 'before' (left/bottom of) the band's min_coord side
+            primary_branch_node, secondary_branch_node = node.lb, node.rt
+        else:  # Point is 'within' or 'after' (right/top of) the band's min_coord side
+            primary_branch_node, secondary_branch_node = node.rt, node.lb
+
+        # Explore the primary branch
+        current_champion, current_champion_dist_sq = self._nearest(
+            primary_branch_node,
+            p,
+            current_champion,
+            current_champion_dist_sq,
+            not even_level,
+        )
+
+        # Pruning check for the secondary branch
+        # The squared distance used for pruning is (to_relevant_band_edge_signed**2).
+        dist_sq_for_pruning_check = to_relevant_band_edge_signed**2
+        if current_champion_dist_sq >= dist_sq_for_pruning_check:
+            current_champion, current_champion_dist_sq = self._nearest(
+                secondary_branch_node,
+                p,
+                current_champion,
+                current_champion_dist_sq,
+                not even_level,
+            )
+
+        return current_champion, current_champion_dist_sq
 
     def _direction_link_to_band(self, link: Link, node: Node, even_level: bool) -> int:
         """

@@ -154,7 +154,7 @@ class Simulator:
             assert total_simulation_time > 0, "total_simulation_time is less than 0"
             print(f"总模拟时间: {total_simulation_time}")
 
-            with tqdm(total=100, desc="Progress", mininterval=1, unit="event") as pbar:
+            with tqdm(total=100, desc="Progress", mininterval=1) as pbar:
                 while self.events:
                     event = heapq.heappop(self.events)
                     assert event is not None, "event is None"

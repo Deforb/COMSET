@@ -15,6 +15,7 @@ from comset.COMSETsystem.TrafficPattern import TrafficPattern
 # from comset.utils.parallel_processor import ParallelProcessor
 
 if TYPE_CHECKING:
+    from zoneinfo import ZoneInfo
     from COMSETsystem.CityMap import CityMap
     from COMSETsystem.Event import Event
     from DataParsing.Resource import Resource
@@ -36,7 +37,7 @@ class MapWithData:
             agent_placement_random_seed  # 代理放置随机种子
         )
         self.events: List[Event] = []  # 事件优先队列（使用heapq模拟）
-        self.zone_id: int = map.compute_zone_id()  # 时区信息
+        self.zone_id: ZoneInfo = map.compute_zone_id()  # 时区信息
         self.resources_parsed: List[Resource] = []  # 解析后的资源列表
         self.earliest_resource_time: int = sys.maxsize  # 最早资源出现时间
         self.latest_resource_time: int = -1  # 最晚资源结束时间
@@ -63,9 +64,7 @@ class MapWithData:
             long the latest resource time
         """
         parser = CSVNewYorkParser(self.resource_file, self.zone_id)
-        self.resources_parsed: List[Resource] = parser.parse(
-            Configuration.TIME_RESOLUTION
-        )
+        self.resources_parsed = parser.parse(Configuration.TIME_RESOLUTION)
 
         events_list: List[ResourceEvent] = []
         try:

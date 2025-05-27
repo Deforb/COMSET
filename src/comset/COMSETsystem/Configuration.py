@@ -73,7 +73,6 @@ class Configuration:
         self.map: CityMap = self._make_city_map()
 
         # Pre-compute shortest travel times between all pairs of intersections.
-        print("Pre-computing all pair travel times...")
         self.map.calc_travel_times()
 
     # Beside make() and get(), most methods should be static. Much safer that way to avoid initialization problems

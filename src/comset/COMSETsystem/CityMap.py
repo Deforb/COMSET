@@ -156,7 +156,9 @@ class CityMap:
         n = len(node_to_index)
 
         # 初始化路径表
-        path_table = [[None] * n for _ in range(n)]
+        path_table: List[List[Optional[PathTableEntry]]] = [
+            [None] * n for _ in range(n)
+        ]
 
         # 准备道路数据（包含完整索引信息）
         road_data: dict[int, list] = {}
@@ -185,7 +187,7 @@ class CityMap:
         results = ParallelProcessor.process_star(
             items=process_items,
             process_func=self._calc_travel_times_for_source_static,
-            desc="计算最短路径时间",
+            desc="Pre-computing all pair travel times",
         )
 
         # 将结果填入路径表

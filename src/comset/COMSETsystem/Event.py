@@ -91,8 +91,9 @@ class Event(ABC):
         Set the time of the event.
         Note: Should never change the time when the event is on the simulator queue!
         """
-        if hasattr(self, "simulator") and self.simulator is not None:
-            assert not self.simulator.has_event(self)
+        # TODO: it costs too much time to check this every time, refactor to heapdict
+        # if hasattr(self, "simulator") and self.simulator is not None:
+        #     assert not self.simulator.has_event(self)
         self._time = value
 
     @override

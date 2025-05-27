@@ -155,20 +155,23 @@ class ScoreInfo:
                 self.expired_resources * 100
             ) // self.total_resources
 
-            avg_cruise_time = (
-                self.configuration.to_seconds(self.total_agent_cruise_time)
-                // self.total_assignments
-            )
-
-            avg_approach_time = (
-                self.configuration.to_seconds(self.total_agent_approach_time)
-                // self.total_assignments
-            )
-
-            avg_trip_time = (
-                self.configuration.to_seconds(self.total_resource_trip_time)
-                // self.total_assignments
-            )
+            if self.total_assignments == 0:
+                avg_cruise_time = 0
+                avg_approach_time = 0
+                avg_trip_time = 0
+            else:
+                avg_cruise_time = (
+                    self.configuration.to_seconds(self.total_agent_cruise_time)
+                    // self.total_assignments
+                )
+                avg_approach_time = (
+                    self.configuration.to_seconds(self.total_agent_approach_time)
+                    // self.total_assignments
+                )
+                avg_trip_time = (
+                    self.configuration.to_seconds(self.total_resource_trip_time)
+                    // self.total_assignments
+                )
 
             self.sb.append(f"average agent search time: {avg_search_time} seconds\n")
             self.sb.append(
