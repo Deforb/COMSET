@@ -36,19 +36,6 @@ class Simulator:
     increasing way.
     """
 
-    class PickUp:
-        """Helper class to track resource pickups"""
-
-        def __init__(self, resource: ResourceEvent, time: int):
-            self.resource = resource
-            self.time = time
-
-        def get_resource(self) -> ResourceEvent:
-            return self.resource
-
-        def get_time(self) -> int:
-            return self.time
-
     def __init__(self, config: Configuration):
         """
         Constructor of the class Main. This is made such that the type of
@@ -86,7 +73,7 @@ class Simulator:
             2. Load the resource data set and map match.
             3. Create the event queue.
 
-        See COMSETsystem.Configuration and Main.java for detailed description of the parameters.
+        See `COMSETsystem.Configuration` and `main.py` for detailed description of the parameters.
         """
         self.map = self.configuration.map
 
@@ -198,7 +185,7 @@ class Simulator:
 
         print("Simulation finished.")
 
-        if self.score:
+        if self.score is not None:
             self.score.end()
 
     def has_event(self, event: Event) -> bool:

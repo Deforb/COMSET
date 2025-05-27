@@ -108,6 +108,9 @@ class ResourceEvent(Event):
         logger.info(
             f"******** ResourceEvent id = {self.id} triggered at time {self.time}",
         )
+        print(
+            f"******** ResourceEvent id = {self.id} triggered at time {self.time}",
+        )
         logger.info("Loc = %s,%s", self.pickup_loc, self.dropoff_loc)
 
         if self.pickup_loc is None:

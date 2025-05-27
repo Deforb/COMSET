@@ -56,7 +56,8 @@ class AgentEvent(Event):
         """
         Constructor for class AgentEvent.
 
-        :param loc: this agent's location when it becomes empty.
+        Args:
+            loc: this agent's location when it becomes empty.
         """
         super().__init__(started_search, simulator, fleet_manager)
         self.loc: LocationOnRoad = loc
@@ -72,6 +73,7 @@ class AgentEvent(Event):
     @override
     def trigger(self) -> AgentEvent:
         logger.info(f"******** AgentEvent id = {self.id} triggered at time {self.time}")
+        print(f"******** AgentEvent id = {self.id} triggered at time {self.time}")
         logger.info(f"Loc = {self.loc}")
 
         match self.state:

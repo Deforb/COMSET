@@ -59,7 +59,6 @@ class Event(ABC):
     def id(self, value: int) -> None:
         self._id = value
 
-    @override
     def __lt__(self, other: "Event") -> bool:
         """
         To be used by the PriorityQueue to order the Events
@@ -91,7 +90,8 @@ class Event(ABC):
         Set the time of the event.
         Note: Should never change the time when the event is on the simulator queue!
         """
-        # TODO: it costs too much time to check this every time, refactor to heapdict
+        # TODO: it costs too much time to check this every time,
+        # temporally delete it and plan refactor to heapdict.
         # if hasattr(self, "simulator") and self.simulator is not None:
         #     assert not self.simulator.has_event(self)
         self._time = value

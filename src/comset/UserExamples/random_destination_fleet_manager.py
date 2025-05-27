@@ -79,7 +79,14 @@ class RandomDestinationFleetManager(FleetManager):
             best_resource = None
             earliest_arrival = float("inf")
             for res in sorted(self.waiting_resources.values(), key=lambda r: r.id):
+                # If res is in waitingResources, then it must have not expired yet
+                # testing null pointer exception
+                # Warning: map.travelTimeBetween returns the travel time based on speed limits, not
+                # the dynamic travel time. Thus the travel time returned by map.travelTimeBetween may be different
+                # than the actual travel time.
                 travel_time = self.map.travel_time_between(current_loc, res.pickup_loc)
+
+                # if the resource is reachable before expiration
                 arrive_time = time + travel_time
                 if (
                     arrive_time <= res.expiration_time
@@ -88,7 +95,7 @@ class RandomDestinationFleetManager(FleetManager):
                     earliest_arrival = arrive_time
                     best_resource = res
 
-            if best_resource:
+            if best_resource is not None:
                 del self.waiting_resources[best_resource.id]
                 action = AgentAction.assign_to(
                     resource.assigned_agent_id, best_resource.id

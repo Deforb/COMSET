@@ -135,22 +135,23 @@ class MapWithData:
             xy[0],
             xy[1],
         )
+        distance_from_start_vertex: float = self.distance(
+            snap_result[0],
+            snap_result[1],
+            link.from_vertex.get_x(),
+            link.from_vertex.get_y(),
+        )
 
-        # 计算距离起始路口的距离
-        distanceFromStartIntersection = 0.0
+        # find the start distance of link
+        distance_from_start_intersection = 0.0
         for aLink in link.road.links:
             if aLink.id == link.id:
-                distanceFromStartIntersection += self.distance(
-                    snap_result[0],
-                    snap_result[1],
-                    link.to_vertex.get_x(),
-                    link.to_vertex.get_y(),
-                )
+                distance_from_start_intersection += distance_from_start_vertex
                 break
             else:
-                distanceFromStartIntersection += aLink.length
+                distance_from_start_intersection += aLink.length
 
-        return LocationOnRoad(link.road, distanceFromStartIntersection)
+        return LocationOnRoad(link.road, distance_from_start_intersection)
 
     # 获取交通模式（动态交通模式构建）
     def get_traffic_pattern(
@@ -170,27 +171,25 @@ class MapWithData:
     # 计算点到线段的最短投影（snap算法）
     def snap(
         self, x1: float, y1: float, x2: float, y2: float, x: float, y: float
-    ) -> list:
-        result = [0.0, 0.0, 0.0]
+    ) -> tuple[float, float, float]:
         length = (x1 - x2) ** 2 + (y1 - y2) ** 2
 
         if length == 0:
             dist = self.distance(x1, y1, x, y)
-            result[0], result[1], result[2] = x1, y1, dist
+            return x1, y1, dist
         else:
             t = ((x - x1) * (x2 - x1) + (y - y1) * (y2 - y1)) / length
             if t < 0.0:
                 dist = self.distance(x1, y1, x, y)
-                result[0], result[1], result[2] = x1, y1, dist
+                return x1, y1, dist
             elif t > 1.0:
                 dist = self.distance(x2, y2, x, y)
-                result[0], result[1], result[2] = x2, y2, dist
+                return x2, y2, dist
             else:
                 proj_x = x1 + t * (x2 - x1)
                 proj_y = y1 + t * (y2 - y1)
                 dist = self.distance(proj_x, proj_y, x, y)
-                result[0], result[1], result[2] = proj_x, proj_y, dist
-        return result
+                return proj_x, proj_y, dist
 
     # 计算两点间欧氏距离
     @staticmethod
@@ -214,6 +213,7 @@ class MapWithData:
             ev = AgentEvent(location, deploy_time, simulator, fleetManager)
             simulator.mark_agent_empty(ev)
             # heapq.heappush(self.events, ev)
+            events_list.append(ev)
 
         self.events.extend(events_list)
 

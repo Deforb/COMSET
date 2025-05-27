@@ -112,7 +112,7 @@ class CityMap:
                 )
             except ZeroDivisionError:
                 print("source.road.speed = 0")
-                exit()
+                return int(1e9)
         else:
             end_source = LocationOnRoad(source.road, source.road.length)
             time_to_end = (
