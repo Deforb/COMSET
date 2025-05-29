@@ -73,7 +73,6 @@ class AgentEvent(Event):
     @override
     def trigger(self) -> AgentEvent:
         logger.info(f"******** AgentEvent id = {self.id} triggered at time {self.time}")
-        print(f"******** AgentEvent id = {self.id} triggered at time {self.time}")
         logger.info(f"Loc = {self.loc}")
 
         match self.state:

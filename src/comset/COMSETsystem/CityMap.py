@@ -44,11 +44,23 @@ class CityMap:
         """
         Constructor of CityMap
         """
+
+        # A mapping from all the intersection ids to corresponding Intersections
         self.intersections: Dict[int, Intersection] = intersections or {}
+
+        # A list of roads
         self.roads: List[Road] = roads or []
+
+        # A projector to convert between lat,lon coordinates and xy coordinates.
         self._projector: Optional[GeoProjector] = projector
+
+        # kdTree for map matching
         self.kd_tree: Optional[KdTree] = kd_tree
+
+        # Shortest travel-time path table.
         self.immutable_path_table: Tuple[Tuple[PathTableEntry, ...], ...] = tuple()
+
+        # A map from an intersection's path table index to the intersection itself.
         self.intersections_by_path_table_index: Dict[int, Intersection] = {}
 
         if intersections is not None:
@@ -142,45 +154,34 @@ class CityMap:
         计算所有节点对之间的最短路径时间。
         使用Dijkstra算法，通过进程池实现并行计算。
         """
-        # 获取所有节点并建立全局索引映射
-        sources = list(self.intersections.values())
-        all_nodes: set[int] = {i.id for i in sources}
-        for inter in sources:
-            for road in inter.get_roads_from():
-                all_nodes.add(road.to.id)
-
-        # 建立全局节点ID到索引的映射
-        node_to_index: Dict[int, int] = {
-            node_id: idx for idx, node_id in enumerate(sorted(all_nodes))
-        }
-        n = len(node_to_index)
+        intersections = list(self.intersections.values())
+        n = len(intersections)
 
         # 初始化路径表
         path_table: List[List[Optional[PathTableEntry]]] = [
             [None] * n for _ in range(n)
         ]
 
-        # 准备道路数据（包含完整索引信息）
-        road_data: dict[int, list] = {}
-        for source in sources:
-            roads: list[int, int, float] = []
-            for road in source.get_roads_from():
-                # 确保所有邻居节点都有索引
-                if road.to.id not in node_to_index:
-                    node_to_index[road.to.id] = len(node_to_index)
-                roads.append(
-                    (
-                        road.to.id,
-                        node_to_index[road.to.id],  # 使用全局索引
-                        road.travel_time,
-                    )
-                )
-            road_data[source.id] = roads
+        # 建立全局节点ID到索引的映射
+        id_to_index: Dict[int, int] = {
+            intersection.id: intersection.path_table_index
+            for intersection in intersections
+        }
+
+        # 准备道路数据
+        road_data = {}
+        for intersection in intersections:
+            neighbors: List[Tuple[int, int, float]] = []
+            for road in intersection.get_roads_from():
+                to_id = road.to.id
+                to_idx = id_to_index[to_id]
+                neighbors.append((to_id, to_idx, road.travel_time))
+            road_data[intersection.id] = neighbors
 
         # 准备并行处理参数
         process_items: List[Tuple] = [
-            (source.id, node_to_index[source.id], road_data, node_to_index)
-            for source in sources
+            (intersection.id, intersection.path_table_index, road_data, id_to_index)
+            for intersection in intersections
         ]
 
         # 使用ParallelProcessor进行并行计算
@@ -191,8 +192,8 @@ class CityMap:
         )
 
         # 将结果填入路径表
-        for idx, result in enumerate(results):
-            path_table[idx] = result
+        for r_source_idx, r_path_table_row in results:
+            path_table[r_source_idx] = r_path_table_row
 
         # 使路径表不可修改
         self._make_path_table_unmodifiable(path_table)
@@ -202,8 +203,8 @@ class CityMap:
         source_id: int,
         source_idx: int,
         road_data: Dict[int, List[Tuple[int, int, float]]],
-        node_to_index: Dict[int, int],
-    ) -> List[Optional[PathTableEntry]]:
+        id_to_idx: Dict[int, int],
+    ) -> Tuple[int, List[Optional[PathTableEntry]]]:
         """
         计算从给定源节点到所有其他节点的最短路径。
         这是一个静态方法，只接收必要的数据，避免序列化整个CityMap对象。
@@ -212,22 +213,22 @@ class CityMap:
             source_id: 源节点ID
             source_idx: 源节点路径表索引
             road_data: 道路数据，格式为 {node_id: [(neighbor_id, neighbor_idx, travel_time), ...]}
-            node_to_index: 节点ID到路径表索引的映射
+            id_to_idx: 节点ID到路径表索引的映射 (Note: 'node_to_index' in docstring was id_to_idx in params)
 
         Returns:
-            包含从源节点到所有其他节点的最短路径信息的列表
+            一个元组，包含源节点路径表索引和从源节点到所有其他节点的最短路径信息的列表
         """
-        n = len(node_to_index)  # 节点数量等于road_data的长度
+        n = len(id_to_idx)  # 节点数量等于road_data的长度
 
         # 初始化距离字典和优先队列
-        path_table_row = [None] * n
+        path_table_row: List[Optional[PathTableEntry]] = [None] * n
         path_table_row[source_idx] = PathTableEntry(0.0, source_idx)
 
-        distance = {node_id: float("inf") for node_id in node_to_index}
+        distance = {node_id: float("inf") for node_id in id_to_idx}
         distance[source_id] = 0.0
 
         heap = heapdict()
-        for node_id in node_to_index:
+        for node_id in id_to_idx:
             heap[node_id] = distance[node_id]
 
         while heap:
@@ -235,10 +236,10 @@ class CityMap:
             if current_dist > distance[current_id]:
                 continue
 
-            current_idx = node_to_index[current_id]
+            current_idx = id_to_idx[current_id]
 
             # 遍历所有出边
-            for neighbor_id, neighbor_idx, travel_time in road_data[current_id]:
+            for neighbor_id, neighbor_idx, travel_time in road_data.get(current_id, []):
                 if neighbor_id not in distance:
                     continue  # 忽略无效节点
 
@@ -248,7 +249,7 @@ class CityMap:
                     path_table_row[neighbor_idx] = PathTableEntry(new_dist, current_idx)
                     heap[neighbor_id] = new_dist
 
-        return path_table_row
+        return source_idx, path_table_row
 
     def _make_path_table_unmodifiable(
         self, path_table: List[List[Optional[PathTableEntry]]]
@@ -338,12 +339,14 @@ class CityMap:
                 from_id = road.from_.id
                 if from_id not in intersections_copy:
                     new_intersection = Intersection(road.from_)
+                    assert road.from_.vertex is not None, f"Intersection {road.from_.id} is part of a road but has no vertex."
                     new_intersection.vertex = vertices_copy[road.from_.vertex.id]
                     intersections_copy[from_id] = new_intersection
 
                 to_id = road.to.id
                 if to_id not in intersections_copy:
                     new_intersection = Intersection(road.to)
+                    assert road.to.vertex is not None, f"Intersection {road.to.id} is part of a road but has no vertex."
                     new_intersection.vertex = vertices_copy[road.to.vertex.id]
                     intersections_copy[to_id] = new_intersection
 
@@ -395,7 +398,7 @@ class CityMap:
         intersection = next(iter(self.intersections.values()))
 
         # Disable warning messages
-        logging.getLogger().setLevel(logging.CRITICAL)
+        # logging.getLogger().setLevel(logging.CRITICAL)
 
         # Use timezonefinder to get the timezone name
         tf = TimezoneFinder()

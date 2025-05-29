@@ -8,3 +8,4 @@ dependencies:
   - timezonefinder
   - tqdm
   - tzdata
+  - heapdict

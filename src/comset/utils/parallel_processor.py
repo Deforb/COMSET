@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import List, TypeVar, Callable, Any, Optional, Tuple
+from typing import List, TypeVar, Callable, Optional, Tuple
 from multiprocessing import Pool, cpu_count
 from functools import partial
 import logging
@@ -17,12 +17,20 @@ class ParallelProcessor:
     支持多种并行处理模式，包括map、starmap等。
     """
 
-    @staticmethod
+    n_jobs: int = cpu_count()
+
+    def __init__(self, n_jobs: Optional[int] = None):
+        if n_jobs is not None:
+            self.n_jobs = n_jobs
+        else:
+            self.n_jobs = self.__class__.n_jobs
+
+    @classmethod
     def process(
+        cls,
         items: List[T],
         process_func: Callable[[T], R],
         chunk_size: Optional[int] = None,
-        n_jobs: Optional[int] = None,
         ordered: bool = True,
         show_progress: bool = True,
         desc: str = "Processing",
@@ -47,14 +55,13 @@ class ParallelProcessor:
         if not items:
             return []
 
-        n_jobs = n_jobs or cpu_count()
-        chunk_size = chunk_size or max(1, len(items) // (n_jobs * 4))
+        chunk_size = chunk_size or max(1, len(items) // (cls.n_jobs * 4))
 
         # 创建偏函数，将额外参数绑定到处理函数
         process_func_with_args = partial(process_func, **kwargs)
 
         try:
-            with Pool(n_jobs) as pool:
+            with Pool(cls.n_jobs) as pool:
                 if show_progress:
                     with tqdm(total=len(items), desc=desc) as pbar:
                         results = []
@@ -74,12 +81,12 @@ class ParallelProcessor:
             )
             raise e
 
-    @staticmethod
+    @classmethod
     def process_star(
-        items: List[Tuple[Any, ...]],
+        cls,
+        items: List[Tuple],
         process_func: Callable[..., R],
         chunk_size: Optional[int] = None,
-        n_jobs: Optional[int] = None,
         show_progress: bool = True,
         desc: str = "Processing",
     ) -> List[R]:
@@ -100,11 +107,10 @@ class ParallelProcessor:
         if not items:
             return []
 
-        n_jobs = n_jobs or cpu_count()
-        chunk_size = chunk_size or max(1, len(items) // (n_jobs * 4))
+        chunk_size = chunk_size or max(1, len(items) // (cls.n_jobs * 4))
 
         try:
-            with Pool(n_jobs) as pool:
+            with Pool(cls.n_jobs) as pool:
                 if show_progress:
                     with tqdm(total=len(items), desc=desc) as pbar:
                         results: List[R] = []
@@ -129,42 +135,7 @@ class ParallelProcessor:
             raise e
 
     @staticmethod
-    def process_batch(
-        items: List[T],
-        process_func: Callable[[List[T]], List[R]],
-        batch_size: int,
-        n_jobs: Optional[int] = None,
-        desc: str = "Processing",
-    ) -> List[R]:
-        """
-        将数据分批并行处理。
-
-        Args:
-            items: 要处理的项目列表
-            process_func: 批处理函数
-            batch_size: 每批处理的数据量
-            n_jobs: 进程数，默认为CPU核心数
-            desc: 进度描述
-
-        Returns:
-            处理结果列表
-        """
-        if not items:
-            return []
-
-        # 将数据分成批次
-        batches = [items[i : i + batch_size] for i in range(0, len(items), batch_size)]
-
-        # 并行处理批次
-        results = ParallelProcessor.process(
-            batches, process_func, n_jobs=n_jobs, desc=desc
-        )
-
-        # 展平结果
-        return [item for batch in results for item in batch]
-
-    @staticmethod
-    def _call_with_unpack(args: Tuple[Any, ...], func: Callable[..., R]) -> R:
+    def _call_with_unpack(args: Tuple, func: Callable[..., R]) -> R:
         """
         解包参数并调用处理函数，用于进程池中可序列化调用。
         """
