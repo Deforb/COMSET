@@ -1,5 +1,27 @@
 """
-Profiling the code with cProfile
+A performance profiling tool module using cProfile.
+
+This module provides two main functionalities:
+1. collect(): Run the program and collect performance profiling data
+2. display(): Display the profiling results
+
+Key Features:
+- Performance profiling using cProfile
+- Save profiling results to .prof file
+- Visualize performance data
+- Support sorting by cumulative time and display top 20 time-consuming functions
+
+Usage Example:
+    # Collect performance data
+    collect()
+    
+    # Display analysis results
+    display()
+
+Notes:
+- Running collect() will execute main() function and generate profile_results.prof file
+- display() will show the top 20 time-consuming functions sorted by execution time
+- Analysis results include call counts, total time, and time per call for each function
 """
 
 from pstats import Stats, SortKey
@@ -32,4 +54,4 @@ def display():
 
 if __name__ == "__main__":
     collect()
-    display()
+    # display()

@@ -52,7 +52,7 @@ class ResourceEvent(Event):
         :param fleet_manager: the fleet manager object
         :param resource_maximum_life_time: time interval that resource waits and expires after that
         """
-        super().__init__(available_time, simulator, fleet_manager)
+        super().__init__(available_time, simulator, fleet_manager, priority=Event.DEFAULT_EVENT_PRIORITY)
         self.pickup_loc: LocationOnRoad = pickup_loc
         self.dropoff_loc: LocationOnRoad = dropoff_loc
         self.available_time: int = available_time
@@ -74,11 +74,12 @@ class ResourceEvent(Event):
         """
         Constructor for ResourceEvent that overrides tripTime. Makes it easier to test.
 
-        :param available_time: time when this agent is introduced to the system
-        :param pickup_loc: this resource's location when it becomes available
-        :param dropoff_loc: this resource's destination location
-        :param static_trip_time: the time it takes to go from pickUpLoc to dropoffLoc under static traffic condition
-        :param resource_maximum_life_time: time interval that resource waits and expires after that
+        Args:
+            available_time: time when this agent is introduced to the system
+            pickup_loc: this resource's location when it becomes available
+            dropoff_loc: this resource's destination location
+            static_trip_time: the time it takes to go from pickUpLoc to dropoffLoc under static traffic condition
+            resource_maximum_life_time: time interval that resource waits and expires after that
         """
         instance = cls.__new__(cls)
         super(ResourceEvent, instance).__init__(available_time)
@@ -162,7 +163,7 @@ class ResourceEvent(Event):
             self.time,
         )
         self._process_agent_action(action)
-        self.time = self.expiration_time
+        self.set_time(self.expiration_time)
         self.state = ResourceEvent.State.EXPIRED
 
     def _expire(self) -> None:

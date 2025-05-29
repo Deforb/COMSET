@@ -19,13 +19,20 @@ class Event(ABC):
     time. This is when this event will happen, and thus triggered.
     """
 
+    __slots__ = ("_id", "time", "simulator", "fleet_manager", "_priority")
     _max_id = 0
+
+    # Define priorities for event types
+    # Smaller number means higher priority
+    AGENT_EVENT_PRIORITY = 0
+    DEFAULT_EVENT_PRIORITY = 1
 
     def __init__(
         self,
         time: int,
         simulator: Optional[Simulator] = None,
         fleet_manager: Optional[FleetManager] = None,
+        priority: int = DEFAULT_EVENT_PRIORITY,  # Add priority parameter
     ) -> None:
         """
         Constructor for class Event
@@ -34,12 +41,14 @@ class Event(ABC):
             time: core to this class, indicates when this event will trigger.
             simulator: a reference to simulator
             fleet_manager: a reference to fleet manager
+            priority: the priority of the event for tie-breaking
         """
         self._id = Event._max_id
         Event._max_id += 1
-        self._time = time
+        self.time = time
         self.simulator = simulator
         self.fleet_manager = fleet_manager
+        self._priority = priority  # Initialize priority
 
     @abstractmethod
     def trigger(self) -> Optional[EventType]:
@@ -69,23 +78,18 @@ class Event(ABC):
         Returns:
             bool: whether this event should be processed before the other
         """
-        if self.time != other.time:
+        if self.time != other.time:  # Use direct attribute access
             return self.time < other.time
-        elif self.__class__ == other.__class__:  # tie on time; if same type compare id
-            if self.id != other.id:
-                return self.id < other.id
-            else:
-                assert False, "Duplicate event exception"
-        else:
-            # if not same type, agent should be processed first
-            return self.__class__.__name__ == "AgentEvent"
+        # Tie on time; compare priority
+        if self._priority != other._priority:
+            return self._priority < other._priority
+        # Tie on time and priority; compare id
+        if self._id != other._id:
+            return self._id < other._id
 
-    @property
-    def time(self) -> int:
-        return self._time
+        assert False, "Duplicate event exception: All attributes are identical."
 
-    @time.setter
-    def time(self, value: int) -> None:
+    def set_time(self, value: int) -> None:
         """
         Set the time of the event.
         Note: Should never change the time when the event is on the simulator queue!
@@ -94,7 +98,7 @@ class Event(ABC):
         # temporally delete it and plan refactor to heapdict.
         # if hasattr(self, "simulator") and self.simulator is not None:
         #     assert not self.simulator.has_event(self)
-        self._time = value
+        self.time = value
 
     @override
     def __str__(self) -> str:

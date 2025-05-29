@@ -59,7 +59,7 @@ class AgentEvent(Event):
         Args:
             loc: this agent's location when it becomes empty.
         """
-        super().__init__(started_search, simulator, fleet_manager)
+        super().__init__(started_search, simulator, fleet_manager, priority=Event.AGENT_EVENT_PRIORITY)
         self.loc: LocationOnRoad = loc
         self.is_pickup: bool = False
         self.state: AgentEvent.State = AgentEvent.State.INITIAL
@@ -359,7 +359,7 @@ class AgentEvent(Event):
         assert (
             time >= self.simulator.simulation_time
         ), "trying to update event to the past time"
-        self.time = time
+        self.set_time(time)
         self.loc = loc
         self.state = state
         self.last_appear_time = last_appear_time
@@ -379,7 +379,8 @@ class AgentEvent(Event):
             and agent_action.get_type() == AgentAction.Type.ASSIGN
         )
 
-    def _is_on_same_road(self, loc1: LocationOnRoad, loc2: LocationOnRoad) -> bool:
+    @staticmethod
+    def _is_on_same_road(loc1: LocationOnRoad, loc2: LocationOnRoad) -> bool:
         return loc1.road == loc2.road
 
     def _assign_resource(self, resource_event: ResourceEvent) -> None:

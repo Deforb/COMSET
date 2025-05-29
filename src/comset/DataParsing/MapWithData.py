@@ -223,7 +223,7 @@ class MapWithData:
         return self.events
 
     def build_sliding_traffic_pattern(
-        self, resources: List[Resource], epoch: int, step: int, dynamicTraffic: bool
+        self, resources: List[Resource], epoch: int, step: int, dynamic_traffic: bool
     ) -> TrafficPattern:
         """
         Build a traffic pattern to adjust travel speed at each road over the time of a day.
@@ -244,7 +244,7 @@ class MapWithData:
             resources: set of resources that will be used to compute speed factors.
             epoch: the window of time that determines the speed factor
             step: the resolution of the time-of-day speed dependence.
-            dynamicTraffic: true if we will be simulated with time-of-day dependent traffic.
+            dynamic_traffic: true if we will be simulated with time-of-day dependent traffic.
 
         Return:
             traffic pattern
@@ -271,7 +271,7 @@ class MapWithData:
                     epoch_resources.append(resources[resource_index])
                 resource_index += 1
 
-            if not dynamicTraffic:
+            if not dynamic_traffic:
                 speed_factor = 1.0
             else:
                 if not epoch_resources:
