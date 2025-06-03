@@ -1,24 +1,23 @@
 from __future__ import annotations
+
 import logging
 from collections import deque
-from typing import Dict, List, Optional, Tuple, Deque, Union, TYPE_CHECKING
 from dataclasses import dataclass
+from typing import Deque, Dict, List, Optional, Tuple, Union
 from zoneinfo import ZoneInfo
 
 from heapdict import heapdict
 from timezonefinder import TimezoneFinder
 
-from comset.COMSETsystem.LocationOnRoad import LocationOnRoad
-from comset.DataParsing.GeoProjector import GeoProjector
-from comset.COMSETsystem.Vertex import Vertex
-from comset.COMSETsystem.Link import Link
-from comset.COMSETsystem.Road import Road
 from comset.COMSETsystem.Intersection import Intersection
+from comset.COMSETsystem.Link import Link
+from comset.COMSETsystem.LocationOnRoad import LocationOnRoad
 from comset.COMSETsystem.Point2D import Point2D
+from comset.COMSETsystem.Road import Road
+from comset.COMSETsystem.Vertex import Vertex
+from comset.DataParsing.GeoProjector import GeoProjector
+from comset.DataParsing.KdTree import KdTree
 from comset.utils.parallel_processor import ParallelProcessor
-
-if TYPE_CHECKING:
-    from DataParsing.KdTree import KdTree
 
 
 @dataclass(frozen=True)
@@ -29,8 +28,8 @@ class PathTableEntry:
 
 class CityMap:
     """
-    The CityMap represents the map of a city.
-    The map is represented as a directed graph of intersections connected by roads.
+    The CityMap represents the map of a city. \\
+    The map is represented as a directed graph of intersections connected by roads. \\
     (See Intersection and Road class for more details).
     """
 
@@ -84,8 +83,8 @@ class CityMap:
         may be different from the actual travel time.
 
         Args:
-            source The intersection to depart from
-            destination The intersection to arrive at
+            source: The intersection to depart from
+            destination: The intersection to arrive at
         Return:
             the time in seconds it takes to go from source to destination
         """
@@ -102,13 +101,9 @@ class CityMap:
     def _travel_time_between_intersections(
         self, source: Intersection, destination: Intersection
     ) -> float:
-        try:
-            return self.immutable_path_table[source.path_table_index][
-                destination.path_table_index
-            ].travel_time
-        except AttributeError:
-            print("source.path_table_index = ", source.path_table_index)
-            print("destination.path_table_index = ", destination.path_table_index)
+        return self.immutable_path_table[source.path_table_index][
+            destination.path_table_index
+        ].travel_time
 
     def _travel_time_between_locations(
         self, source: LocationOnRoad, destination: LocationOnRoad
@@ -117,12 +112,14 @@ class CityMap:
             source.road == destination.road
             and source.get_displacement_on_road(destination) >= 0
         ):
+            # If the two locations are on the same road and source is closer to the start intersection than destination, 
+            # then the travel time is the difference of travelTimeFromStartIntersection between source and destination.
             try:
                 travel_time = (
                     source.get_displacement_on_road(destination) / source.road.speed
                 )
             except ZeroDivisionError:
-                print("source.road.speed = 0")
+                logging.warning("source.road.speed = 0")
                 return int(1e9)
         else:
             end_source = LocationOnRoad(source.road, source.road.length)

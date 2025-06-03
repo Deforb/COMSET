@@ -1,20 +1,21 @@
 from __future__ import annotations
+
 import heapq
-from typing import Dict, List, Optional, Set, TYPE_CHECKING
+from typing import TYPE_CHECKING, Dict, List, Optional, Set
 
 from tqdm import tqdm
 
-from comset.DataParsing.MapWithData import MapWithData
 from comset.COMSETsystem.AgentEvent import AgentEvent
+from comset.COMSETsystem.LocationOnRoad import LocationOnRoad
 from comset.COMSETsystem.ResourceEvent import ResourceEvent
 from comset.COMSETsystem.ScoreInfo import ScoreInfo
-from comset.COMSETsystem.LocationOnRoad import LocationOnRoad
+from comset.DataParsing.MapWithData import MapWithData
 
 if TYPE_CHECKING:
-    from COMSETsystem.Configuration import Configuration
-    from COMSETsystem.CityMap import CityMap
-    from COMSETsystem.Event import Event
     from COMSETsystem.BaseAgent import BaseAgent
+    from COMSETsystem.CityMap import CityMap
+    from COMSETsystem.Configuration import Configuration
+    from COMSETsystem.Event import Event
     from COMSETsystem.FleetManager import FleetManager
     from COMSETsystem.TrafficPattern import TrafficPattern
 
@@ -122,7 +123,6 @@ class Simulator:
         is created in order to keep track of performance in the current
         simulation. Go through every event until the simulation is over.
         """
-
         print("Running the simulation...")
 
         self.score = ScoreInfo(self.configuration, self)

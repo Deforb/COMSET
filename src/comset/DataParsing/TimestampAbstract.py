@@ -11,9 +11,10 @@ class TimestampAbstract:
         """
         Initialize a TimestampAbstract instance.
 
-        :param pickup_lat: latitude at which resource appears
-        :param pickup_lon: longitude at which agent appears
-        :param time: time at which the agent/resource was at (lon, lat) position on map
+        Args:
+            pickup_lat: latitude at which resource appears
+            pickup_lon: longitude at which agent appears
+            time: time at which the agent/resource was at (lon, lat) position on map
         """
         self._pickup_lat = pickup_lat
         self._pickup_lon = pickup_lon
@@ -24,7 +25,8 @@ class TimestampAbstract:
         """
         Returns the pickup latitude.
 
-        :return: this instance's pickup latitude.
+        Returns:
+            this instance's pickup latitude.
         """
         return self._pickup_lat
 
@@ -33,7 +35,8 @@ class TimestampAbstract:
         """
         Returns the pickup longitude.
 
-        :return: this instance's pickup longitude.
+        Returns:
+            this instance's pickup longitude.
         """
         return self._pickup_lon
 
@@ -42,6 +45,7 @@ class TimestampAbstract:
         """
         Returns the time.
 
-        Return: this instance's time.
+        Returns:
+            this instance's time.
         """
         return self._time

@@ -1,5 +1,6 @@
 from __future__ import annotations
-from typing import Tuple, Optional, TYPE_CHECKING
+
+from typing import TYPE_CHECKING, Optional
 
 if TYPE_CHECKING:
     from ..COMSETsystem.Link import Link
@@ -94,7 +95,7 @@ class KdTree:
         """
         if link is None:
             raise ValueError("called insert() with a null Link")
-        self.root = self._insert(self.root, link, True)
+        self.root = self._insert(self.root, link, even_level=True)
 
     def _insert(self, node: Optional[Node], link: Link, even_level: bool) -> Node:
         if node is None:

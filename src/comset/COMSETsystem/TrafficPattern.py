@@ -232,7 +232,7 @@ class TrafficPattern:
         # FIXME: 添加边界检查：确保距离在有效范围内
         traveled_distance = max(0, traveled_distance)
         traveled_distance = min(traveled_distance, location_on_road.road.length)
-        
+
         if traveled_time < travel_time:
             # reached the end of road before travel time is used out
             return LocationOnRoad.create_from_road_end(location_on_road.road)

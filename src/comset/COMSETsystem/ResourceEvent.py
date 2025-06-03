@@ -1,18 +1,19 @@
 from __future__ import annotations
-from enum import Enum, auto
+
 import logging
-from typing import Optional, override, TYPE_CHECKING
+from enum import Enum, auto
+from typing import TYPE_CHECKING, Optional, override
 
 from comset.COMSETsystem.Event import Event
 from comset.COMSETsystem.FleetManager import ResourceState
 from comset.COMSETsystem.Resource import Resource
 
 if TYPE_CHECKING:
-    from COMSETsystem.Simulator import Simulator
-    from COMSETsystem.FleetManager import FleetManager
     from COMSETsystem.AgentAction import AgentAction
-    from COMSETsystem.LocationOnRoad import LocationOnRoad
     from COMSETsystem.AgentEvent import AgentEvent
+    from COMSETsystem.FleetManager import FleetManager
+    from COMSETsystem.LocationOnRoad import LocationOnRoad
+    from COMSETsystem.Simulator import Simulator
 
 
 logger = logging.getLogger(__name__)
@@ -45,12 +46,13 @@ class ResourceEvent(Event):
         """
         Constructor for class ResourceEvent.
 
-        :param available_time: time when this agent is introduced to the system
-        :param pickup_loc: this resource's location when it becomes available
-        :param dropoff_loc: this resource's destination location
-        :param simulator: the simulator object
-        :param fleet_manager: the fleet manager object
-        :param resource_maximum_life_time: time interval that resource waits and expires after that
+        Args:
+            available_time: time when this agent is introduced to the system
+            pickup_loc: this resource's location when it becomes available
+            dropoff_loc: this resource's destination location
+            simulator: the simulator object
+            fleet_manager: the fleet manager object
+            resource_maximum_life_time: time interval that resource waits and expires after that
         """
         super().__init__(available_time, simulator, fleet_manager, priority=Event.DEFAULT_EVENT_PRIORITY)
         self.pickup_loc: LocationOnRoad = pickup_loc

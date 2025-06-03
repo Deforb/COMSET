@@ -1,16 +1,17 @@
 from __future__ import annotations
+
 from collections import deque
 from random import Random
-from typing import Optional, Set, Dict, Deque, TYPE_CHECKING, override
+from typing import TYPE_CHECKING, Deque, Dict, Optional, Set, override
 
-from comset.COMSETsystem.FleetManager import FleetManager, ResourceState
 from comset.COMSETsystem.AgentAction import AgentAction
+from comset.COMSETsystem.FleetManager import FleetManager, ResourceState
 from comset.COMSETsystem.LocationOnRoad import LocationOnRoad
 
 if TYPE_CHECKING:
     from COMSETsystem.CityMap import CityMap
-    from COMSETsystem.Resource import Resource
     from COMSETsystem.Intersection import Intersection
+    from COMSETsystem.Resource import Resource
 
 
 class RandomDestinationFleetManager(FleetManager):

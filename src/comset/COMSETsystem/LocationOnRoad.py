@@ -10,9 +10,25 @@ class LocationOnRoad:
 
     def __init__(
         self,
-        road_or_location: Union['Road', 'LocationOnRoad'],
+        road_or_location: Union[Road, 'LocationOnRoad'],
         distance_or_displacement: float,
     ) -> None:
+        """
+        初始化道路上的位置。
+        
+        可以通过两种方式初始化：
+        1. 提供一个道路对象和从起始交叉口的距离
+        2. 提供一个已有的LocationOnRoad对象和位移量
+        
+        Args:
+            road_or_location: 道路对象或已有的LocationOnRoad对象
+            distance_or_displacement: 如果第一个参数是Road，则表示从起始交叉口的距离；
+                                     如果第一个参数是LocationOnRoad，则表示相对于该位置的位移
+                                     
+        Raises:
+            TypeError: 当road_or_location参数类型无效时抛出
+            AssertionError: 当计算的距离超出道路长度范围时抛出
+        """
         if isinstance(road_or_location, Road):
             self.road = road_or_location
             self.distance_from_start_intersection = distance_or_displacement
@@ -58,14 +74,14 @@ class LocationOnRoad:
         return self.distance_from_start_intersection == self.road.length
 
     @classmethod
-    def create_from_road_end(cls, road: 'Road') -> 'LocationOnRoad':
+    def create_from_road_end(cls, road: Road) -> 'LocationOnRoad':
         """
         Create a location at the end of the road.
         """
         return cls(road, road.length)
 
     @classmethod
-    def create_from_road_start(cls, road: 'Road') -> 'LocationOnRoad':
+    def create_from_road_start(cls, road: Road) -> 'LocationOnRoad':
         """
         Create a location at the start of the road.
         """
@@ -73,7 +89,7 @@ class LocationOnRoad:
 
     @classmethod
     def copy_with_replaced_road(
-        cls, road: 'Road', location_on_road: 'LocationOnRoad'
+        cls, road: Road, location_on_road: 'LocationOnRoad'
     ) -> 'LocationOnRoad':
         """
         Create a copy with a replaced road, maintaining distance.

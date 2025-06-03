@@ -1,8 +1,9 @@
 from __future__ import annotations
-from dataclasses import dataclass
-from typing import List, TYPE_CHECKING
+
 import math
 import time
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, List
 
 if TYPE_CHECKING:
     from Configuration import Configuration

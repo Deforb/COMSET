@@ -53,8 +53,7 @@ class Vertex:
 
         Args:
             other: The vertex the link goes to
-            distance: The distance of the link (generally just the distance
-                     between the two vertices
+            distance: The distance of the link (generally just the distance between the two vertices)
             speed: The speed limit on the link between the vertices
         """
         if self.id == other.id:

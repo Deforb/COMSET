@@ -279,11 +279,11 @@ class MapWithData:
                     speed_factor = last_known_speed_factor
                 else:
                     speed_factor = self.get_speed_factor(epoch_resources)
-                    if speed_factor >= 0:  # cap speed factor to 1
-                        speed_factor = min(speed_factor, 1.0)
-                        last_known_speed_factor = speed_factor
-                    else:  # didn't get a valid speed factor
+                    if speed_factor < 0:  # didn't get a valid speed factor
                         speed_factor = last_known_speed_factor
+                    else:
+                        speed_factor = min(speed_factor, 1.0)  # cap speed factor to 1
+                        last_known_speed_factor = speed_factor
 
             traffic_pattern.add_traffic_pattern_item(epoch_begin_time, speed_factor)
 
@@ -306,7 +306,7 @@ class MapWithData:
         compared to ideal travel time between pickup and dropoff location based on distance.
 
         Args:
-            resources the set of resources that will determine the speed factor.
+            resources: the set of resources that will determine the speed factor.
         Return:
             speed factor
         """
