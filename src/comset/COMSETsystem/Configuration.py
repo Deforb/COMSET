@@ -94,7 +94,22 @@ class Configuration:
         self.map: CityMap = self._make_city_map()
 
         # Pre-compute shortest travel times between all pairs of intersections.
+        # 测试两种计算方法的效果
+        # 方法1: calc_travel_times()
         self.map.calc_travel_times()
+        travel_times_1 = self.map.immutable_path_table
+        
+        # 方法2: calc_travel_time_raw() 
+        self.map.calc_travel_time_raw()
+        travel_times_2 = self.map.immutable_path_table
+        
+        # 比较两种方法的结果是否相同
+        if travel_times_1 == travel_times_2:
+            print("两种计算方法结果相同")
+        else:
+            print("警告:两种计算方法结果不同,需要进一步分析差异")
+            # 暂时使用 raw 方法
+            self.map.calc_travel_time_raw()
 
     # Beside make() and get(), most methods should be static. Much safer that way to avoid initialization problems
     # where they are called before proper initialization of the singleton.

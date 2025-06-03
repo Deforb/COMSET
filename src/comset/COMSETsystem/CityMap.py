@@ -81,7 +81,7 @@ class CityMap:
         intersection.
 
         Warning: This function assumes traversal at the speed limits of the roads; the computed travel time
-        may be different than the actual travel time.
+        may be different from the actual travel time.
 
         Args:
             source The intersection to depart from
@@ -109,7 +109,6 @@ class CityMap:
         except AttributeError:
             print("source.path_table_index = ", source.path_table_index)
             print("destination.path_table_index = ", destination.path_table_index)
-            print("len(self.immutable_path_table) = ", len(self.immutable_path_table))
 
     def _travel_time_between_locations(
         self, source: LocationOnRoad, destination: LocationOnRoad
@@ -148,6 +147,74 @@ class CityMap:
     def get_nearest_link(self, longitude: float, latitude: float) -> Link:
         x, y = self.projector.from_lat_lon(latitude, longitude)
         return self.kd_tree.nearest(Point2D(x, y))
+
+    def calc_travel_time_raw(self) -> None:
+        @dataclass()
+        class DijkstraQueueEntry:
+            intersection: Intersection
+            cost: float = float("inf")
+            in_queue: bool = True
+
+            def __lt__(self, other: DijkstraQueueEntry) -> bool:
+                if self.cost != other.cost:
+                    return self.cost < other.cost
+                elif self.intersection.id != other.intersection.id:
+                    return self.intersection.id < other.intersection.id
+                else:
+                    raise ValueError("DijkstraQueueEntry.__lt__")
+
+            def __hash__(self) -> int:
+                return hash(id(self))
+
+        intersections: List[Intersection] = sorted(
+            list(self.intersections.values()), key=lambda x: x.id
+        )
+        n = len(intersections)
+        # initialize path table
+
+        path_table: List[List[PathTableEntry]] = [[None] * n for _ in range(n)]
+
+        # creates a queue entry for each intersection
+        queue_entry: Dict[Intersection, DijkstraQueueEntry] = {
+            intersection: DijkstraQueueEntry(intersection)
+            for intersection in intersections
+        }
+
+        for source in intersections:
+            # 'reset' every queue entry
+            for entry in queue_entry.values():
+                entry.cost = float("inf")
+                entry.in_queue = True
+
+            # source is set at distance 0
+            source_entry = queue_entry[source]
+            source_entry.cost = 0
+            path_table[source.path_table_index][source.path_table_index] = (
+                PathTableEntry(0, source.path_table_index)
+            )
+
+            queue = heapdict()
+            for entry in queue_entry.values():
+                queue[entry] = entry.cost
+
+            while queue:
+                entry: DijkstraQueueEntry = queue.popitem()[0]
+                entry.in_queue = False
+
+                for r in entry.intersection.get_roads_from():
+                    v: DijkstraQueueEntry = queue_entry[r.to]
+                    if not v.in_queue:
+                        continue
+                    ncost: float = entry.cost + r.travel_time
+                    if v.cost > ncost:
+                        queue[v] = ncost
+                        v.cost = ncost
+                        path_table[source.path_table_index][
+                            v.intersection.path_table_index
+                        ] = PathTableEntry(v.cost, entry.intersection.path_table_index)
+
+        # Make the path table unmodifiable
+        self._make_path_table_unmodifiable(path_table)
 
     def calc_travel_times(self) -> None:
         """
@@ -339,14 +406,18 @@ class CityMap:
                 from_id = road.from_.id
                 if from_id not in intersections_copy:
                     new_intersection = Intersection(road.from_)
-                    assert road.from_.vertex is not None, f"Intersection {road.from_.id} is part of a road but has no vertex."
+                    assert road.from_.vertex is not None, (
+                        f"Intersection {road.from_.id} is part of a road but has no vertex."
+                    )
                     new_intersection.vertex = vertices_copy[road.from_.vertex.id]
                     intersections_copy[from_id] = new_intersection
 
                 to_id = road.to.id
                 if to_id not in intersections_copy:
                     new_intersection = Intersection(road.to)
-                    assert road.to.vertex is not None, f"Intersection {road.to.id} is part of a road but has no vertex."
+                    assert road.to.vertex is not None, (
+                        f"Intersection {road.to.id} is part of a road but has no vertex."
+                    )
                     new_intersection.vertex = vertices_copy[road.to.vertex.id]
                     intersections_copy[to_id] = new_intersection
 
@@ -398,7 +469,7 @@ class CityMap:
         intersection = next(iter(self.intersections.values()))
 
         # Disable warning messages
-        # logging.getLogger().setLevel(logging.CRITICAL)
+        logging.getLogger().setLevel(logging.CRITICAL)
 
         # Use timezonefinder to get the timezone name
         tf = TimezoneFinder()

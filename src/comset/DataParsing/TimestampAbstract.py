@@ -42,6 +42,6 @@ class TimestampAbstract:
         """
         Returns the time.
 
-        :return: this instance's time.
+        Return: this instance's time.
         """
         return self._time

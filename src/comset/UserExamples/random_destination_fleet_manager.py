@@ -202,6 +202,9 @@ class RandomDestinationFleetManager(FleetManager):
             last_time = self.agent_last_appear_time[agent_id]
             last_loc = self.agent_last_location[agent_id]
             cur_loc = self.get_current_location(last_time, last_loc, current_time)
+            # Warning: map.travel_time_between returns the travel time based on speed limits, not
+            # the dynamic travel time. Thus, the travel time returned by map.travel_time_between may be different
+            # from the actual travel time.
             travel_time = self.map.travel_time_between(cur_loc, resource.pickup_loc)
             arrive_time = current_time + travel_time
 

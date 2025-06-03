@@ -36,4 +36,6 @@ hs_err_pid*
 /bin/
 /*.iml
 /.idea/
+
 profile_results.prof
+nohup.out

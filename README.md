@@ -176,7 +176,7 @@ using the naive random-destination search strategy.
 The resources are the trip records for June 1st, 2016 starting from 8:00am until 10:00pm.
 The simulation should be finished in a few minutes, and you should get something close to the following:
 
-```
+```text
 average agent search time: 446 seconds
 average resource wait time: 169 seconds
 resource expiration percentage: 2%
