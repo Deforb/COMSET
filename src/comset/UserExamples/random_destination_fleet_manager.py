@@ -171,7 +171,7 @@ class RandomDestinationFleetManager(FleetManager):
         route = self.agent_routes.get(agent_id, deque())
 
         if not route:
-            route = self.plan_route_to_target(resource.pickup_loc, resource.dropoff_Loc)
+            route = self.plan_route_to_target(resource.pickup_loc, resource.dropoff_loc)
             self.agent_routes[agent_id] = route
 
         next_intersection = route.popleft()
