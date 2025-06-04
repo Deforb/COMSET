@@ -15,8 +15,10 @@ from src.comset.COMSETsystem.Intersection import Intersection
 from src.comset.COMSETsystem.LocationOnRoad import LocationOnRoad
 from src.comset.COMSETsystem.Resource import Resource
 from src.comset.COMSETsystem.Road import Road
-from global_parameters import GlobalParameters
-from region import Region
+
+from .global_parameters import GlobalParameters
+from .region import Region
+from .traffic_pattern_pred import TrafficPatternPred
 
 
 class MCFFleetManager(FleetManager):
