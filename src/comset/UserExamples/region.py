@@ -1,5 +1,5 @@
-from src.comset.COMSETsystem.Intersection import Intersection
-from src.comset.COMSETsystem.Resource import Resource
+from comset.COMSETsystem.Intersection import Intersection
+from comset.COMSETsystem.Resource import Resource
 
 
 class Region:

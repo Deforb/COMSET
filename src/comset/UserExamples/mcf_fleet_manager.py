@@ -5,19 +5,20 @@ from collections import defaultdict, deque
 from typing import Dict, List, Optional, Set, Tuple, override
 
 import h3
-from ortools.graph import pywrapgraph
+from ortools.graph.python.min_cost_flow import SimpleMinCostFlow
 
-from src.comset.COMSETsystem.AgentAction import AgentAction
-from src.comset.COMSETsystem.CityMap import CityMap
-from src.comset.COMSETsystem.Configuration import Configuration
-from src.comset.COMSETsystem.FleetManager import FleetManager, ResourceState
-from src.comset.COMSETsystem.Intersection import Intersection
-from src.comset.COMSETsystem.LocationOnRoad import LocationOnRoad
-from src.comset.COMSETsystem.Resource import Resource
-from src.comset.COMSETsystem.Road import Road
+from comset.COMSETsystem.AgentAction import AgentAction
+from comset.COMSETsystem.CityMap import CityMap
+from comset.COMSETsystem.Configuration import Configuration
+from comset.COMSETsystem.FleetManager import FleetManager, ResourceState
+from comset.COMSETsystem.Intersection import Intersection
+from comset.COMSETsystem.LocationOnRoad import LocationOnRoad
+from comset.COMSETsystem.Resource import Resource
+from comset.COMSETsystem.Road import Road
 
 from .global_parameters import GlobalParameters
 from .region import Region
+from .temporal_utils import TemporalUtils
 from .traffic_pattern_pred import TrafficPatternPred
 
 
@@ -38,7 +39,6 @@ class MCFFleetManager(FleetManager):
         self.traffic_pattern_pred = TrafficPatternPred(
             GlobalParameters.TRAFFIC_PATTERN_PRED_FILE
         )
-        self.h3 = h3.api.basic_str
         self.agent_start_search_time: Dict[int, int] = {}
         self.region_list: List[Region] = []
         self.hex_addr_to_region: Dict[str, int] = {}
@@ -156,8 +156,8 @@ class MCFFleetManager(FleetManager):
         last_loc = self.agent_last_location[agent_id]
         last_lat, last_lon = self._get_location_lat_lon(last_loc)
         current_lat, current_lon = self._get_location_lat_lon(current_loc)
-        last_addr = self.h3.geo_to_h3(last_lat, last_lon, 8)
-        current_addr = self.h3.geo_to_h3(current_lat, current_lon, 8)
+        last_addr = h3.latlng_to_cell(last_lat, last_lon, 8)
+        current_addr = h3.latlng_to_cell(current_lat, current_lon, 8)
 
         if last_addr != current_addr and agent_id in self.available_agent:
             self._remove_agent_from_region(agent_id)
@@ -303,7 +303,7 @@ class MCFFleetManager(FleetManager):
 
     def _remove_resource_from_region(self, resource: Resource):
         lat, lon = self._get_location_lat_lon(resource.pickup_loc)
-        hex_addr: str = self.h3.geo_to_h3(lat, lon, 8)
+        hex_addr: str = h3.latlng_to_cell(lat, lon, 8)
         if hex_addr in self.hex_addr_to_region:
             self.region_list[
                 self.hex_addr_to_region[hex_addr]
@@ -311,7 +311,7 @@ class MCFFleetManager(FleetManager):
 
     def _add_agent_to_region(self, agent_id: int, current_loc: LocationOnRoad):
         lat, lon = self._get_location_lat_lon(current_loc)
-        hex_addr: str = self.h3.geo_to_h3(lat, lon, 8)
+        hex_addr: str = h3.latlng_to_cell(lat, lon, 8)
         if hex_addr in self.hex_addr_to_region:
             self.region_list[self.hex_addr_to_region[hex_addr]].available_agents.add(
                 agent_id
@@ -319,7 +319,7 @@ class MCFFleetManager(FleetManager):
 
     def _remove_agent_from_region(self, agent_id: int):
         lat, lon = self._get_location_lat_lon(self.agent_last_location[agent_id])
-        hex_addr: str = self.h3.geo_to_h3(lat, lon, 8)
+        hex_addr: str = h3.latlng_to_cell(lat, lon, 8)
         if hex_addr in self.hex_addr_to_region:
             self.region_list[
                 self.hex_addr_to_region[hex_addr]
@@ -327,7 +327,7 @@ class MCFFleetManager(FleetManager):
 
     def _add_resource_to_region(self, resource: Resource):
         lat, lon = self._get_location_lat_lon(resource.pickup_loc)
-        hex_addr: str = self.h3.geo_to_h3(lat, lon, 8)
+        hex_addr: str = h3.latlng_to_cell(lat, lon, 8)
         if hex_addr in self.hex_addr_to_region:
             self.region_list[self.hex_addr_to_region[hex_addr]].waiting_resources.add(
                 resource
@@ -343,7 +343,7 @@ class MCFFleetManager(FleetManager):
 
             for intersection in self.map.intersections.values():
                 lat, lon = intersection.latitude, intersection.longitude
-                hex_addr: str = self.h3.geo_to_h3(lat, lon, 8)
+                hex_addr: str = h3.latlng_to_cell(lat, lon, 8)
                 self.region_list[
                     self.hex_addr_to_region[hex_addr]
                 ].intersection_list.append(intersection)
@@ -436,7 +436,7 @@ class MCFFleetManager(FleetManager):
 
     def get_region(self, intersection: Intersection) -> Optional[Region]:
         """return the region of intersection"""
-        hex_addr: str = self.h3.geo_to_h3(
+        hex_addr: str = h3.latlng_to_cell(
             intersection.latitude, intersection.longitude, 8
         )
         return (
@@ -514,24 +514,24 @@ class MCFFleetManager(FleetManager):
         supplies[source] = len(self.candidate_agents)
         supplies[sink] = -len(self.candidate_agents)
 
-        min_cost_flow = pywrapgraph.SimpleMinCostFlow()
+        min_cost_flow = SimpleMinCostFlow()
         for i in range(len(start_nodes)):
-            min_cost_flow.AddArcWithCapacityAndUnitCost(
+            min_cost_flow.add_arc_with_capacity_and_unit_cost(
                 start_nodes[i], end_nodes[i], capacities[i], costs[i]
             )
 
         for i in range(len(supplies)):
-            min_cost_flow.SetNodeSupply(i, supplies[i])
+            min_cost_flow.set_node_supply(i, supplies[i])
 
-        if min_cost_flow.Solve() == min_cost_flow.OPTIMAL:
-            for i in range(min_cost_flow.NumArcs()):
+        if min_cost_flow.solve() == min_cost_flow.OPTIMAL:
+            for i in range(min_cost_flow.num_arcs()):
                 if (
-                    min_cost_flow.Tail(i) != source
-                    and min_cost_flow.Head(i) != sink
-                    and min_cost_flow.Flow(i) > 0
+                    min_cost_flow.tail(i) != source
+                    and min_cost_flow.head(i) != sink
+                    and min_cost_flow.flow(i) > 0
                 ):
-                    agent = node_agent_map[min_cost_flow.Tail(i)]
-                    region = node_region_map[min_cost_flow.Head(i)]
+                    agent = node_agent_map[min_cost_flow.tail(i)]
+                    region = node_region_map[min_cost_flow.head(i)]
                     self._guide_agent_to_region(agent, region, time)
                     self.agent_start_search_time[agent] = time
 
@@ -639,7 +639,7 @@ class MCFFleetManager(FleetManager):
 
     def _get_k_neighbor_regions(self, region: Region, k: int) -> List[Region]:
         k_regions = []
-        neighbor_str = self.h3.k_ring(region.hex_addr, k)
+        neighbor_str = h3.grid_disk(region.hex_addr, k)
 
         for addr in neighbor_str:
             if addr in self.hex_addr_to_region:
