@@ -15,6 +15,7 @@ from src.comset.COMSETsystem.Intersection import Intersection
 from src.comset.COMSETsystem.LocationOnRoad import LocationOnRoad
 from src.comset.COMSETsystem.Resource import Resource
 from src.comset.COMSETsystem.Road import Road
+from global_parameters import GlobalParameters
 
 
 class MCFFleetManager(FleetManager):
@@ -195,7 +196,7 @@ class MCFFleetManager(FleetManager):
         route = self.agent_routes.get(agent_id, deque())
 
         if not route:
-            route = self.plan_route_to_target(resource.pickup_loc, resource.dropoff_Loc)
+            route = self.plan_route_to_target(resource.pickup_loc, resource.dropoff_loc)
             self.agent_routes[agent_id] = route
 
         next_location = route.popleft()
@@ -605,10 +606,10 @@ class MCFFleetManager(FleetManager):
             assigned_resource = self.resource_assignment.get(agent_id)
             if assigned_resource:
                 dropoff_time = self._get_travel_time_between_locations(
-                    cur_loc, assigned_resource.dropoff_Loc, current_time
+                    cur_loc, assigned_resource.dropoff_loc, current_time
                 )
                 approach_time = self._get_travel_time_between_locations(
-                    assigned_resource.dropoff_Loc,
+                    assigned_resource.dropoff_loc,
                     resource.pickup_loc,
                     current_time + dropoff_time,
                 )
