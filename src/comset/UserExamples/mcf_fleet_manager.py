@@ -16,6 +16,7 @@ from src.comset.COMSETsystem.LocationOnRoad import LocationOnRoad
 from src.comset.COMSETsystem.Resource import Resource
 from src.comset.COMSETsystem.Road import Road
 from global_parameters import GlobalParameters
+from region import Region
 
 
 class MCFFleetManager(FleetManager):
