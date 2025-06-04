@@ -1,26 +1,30 @@
 from __future__ import annotations
+
 import heapq
-import random
 import math
+import random
 import sys
-from typing import List, TYPE_CHECKING
+from typing import TYPE_CHECKING, List
+
 from tqdm import tqdm
 
-from comset.DataParsing.CSVNewYorkParser import CSVNewYorkParser
-from comset.COMSETsystem.Configuration import Configuration
 from comset.COMSETsystem.AgentEvent import AgentEvent
-from comset.COMSETsystem.ResourceEvent import ResourceEvent
+from comset.COMSETsystem.Configuration import Configuration
 from comset.COMSETsystem.LocationOnRoad import LocationOnRoad
+from comset.COMSETsystem.ResourceEvent import ResourceEvent
 from comset.COMSETsystem.TrafficPattern import TrafficPattern
+from comset.DataParsing.CSVNewYorkParser import CSVNewYorkParser
+
 # from comset.utils.parallel_processor import ParallelProcessor
 
 if TYPE_CHECKING:
     from zoneinfo import ZoneInfo
+
     from COMSETsystem.CityMap import CityMap
     from COMSETsystem.Event import Event
-    from DataParsing.Resource import Resource
-    from COMSETsystem.Simulator import Simulator
     from COMSETsystem.FleetManager import FleetManager
+    from COMSETsystem.Simulator import Simulator
+    from DataParsing.Resource import Resource
 
 
 class MapWithData:

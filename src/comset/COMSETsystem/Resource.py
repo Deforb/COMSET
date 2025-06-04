@@ -19,4 +19,4 @@ class Resource:
         self.expiration_time = expiration_time
         self.assigned_agent_id = assigned_agent_id
         self.pickup_loc = pickup_loc
-        self.dropoff_Loc = dropoff_Loc
+        self.dropoff_loc = dropoff_Loc
