@@ -3,9 +3,22 @@ import random
 from bisect import bisect_left
 from collections import defaultdict, deque
 from typing import Dict, List, Optional, Set, Tuple, override
+import os
+import sys
+
+# Suppress ortools loading messages
+_original_stdout = sys.stdout
+_original_stderr = sys.stderr
+sys.stdout = open(os.devnull, "w")
+sys.stderr = open(os.devnull, "w")
 
 import h3
 from ortools.graph.python.min_cost_flow import SimpleMinCostFlow
+
+sys.stdout.close()
+sys.stderr.close()
+sys.stdout = _original_stdout
+sys.stderr = _original_stderr
 
 from comset.COMSETsystem.AgentAction import AgentAction
 from comset.COMSETsystem.CityMap import CityMap
@@ -48,6 +61,13 @@ class MCFFleetManager(FleetManager):
             False
         ] * self.temporal_utils.num_of_time_interval
         self.intersection_resource_map: Dict[int, List[int]] = defaultdict(list)
+
+        self._read_region_file(GlobalParameters.REGION_FILE)
+        self._read_pickup_matrix(GlobalParameters.PICKUP_PRED_FILE)
+        self._read_dropoff_matrix(GlobalParameters.DROPOFF_PRED_FILE)
+        self._read_intersection_resource_file(
+            GlobalParameters.INTERSECTION_RESOURCE_FILE
+        )
 
     @override
     def on_agent_introduced(
@@ -661,6 +681,9 @@ class MCFFleetManager(FleetManager):
             weights.append(weight)
             cumulative_weight += weight
 
+        if cumulative_weight == 0.0:
+            return random.choice(regions)
+
         running_sum = 0.0
         for i in range(size):
             running_sum += weights[i]
@@ -690,7 +713,10 @@ class MCFFleetManager(FleetManager):
                 / Configuration.TIME_RESOLUTION
                 * len(region.available_agents)
             )
-            weighted_dist = math.pow(dist, gamma)
+            try:
+                weighted_dist = math.pow(dist, gamma)
+            except ValueError:
+                weighted_dist = float("inf")
             dist_array.append(weighted_dist)
             sum_dist += weighted_dist
 
@@ -719,7 +745,9 @@ class MCFFleetManager(FleetManager):
     def _sample_index(self, cumulative_probs: List[float], rnd: random.Random) -> int:
         rand_val = rnd.random()
         index = bisect_left(cumulative_probs, rand_val)
-        return index if index < len(cumulative_probs) else len(cumulative_probs) - 1
+        if index < len(cumulative_probs) and rand_val < cumulative_probs[index]:
+            return index
+        return len(cumulative_probs) - 1
 
     def _get_cost(self, agent: int, region: Region, time: int) -> int:
         cur_loc = self.get_current_location(
@@ -807,14 +835,14 @@ class MCFFleetManager(FleetManager):
                 intersection_time_index
             ]
 
-            if resource_sum == 0:
-                mismatch = float("inf")
-            else:
-                mismatch = (
-                    agent_num / len(region.available_agents)
-                    - resource_num / resource_sum
-                )
+            agent_ratio = (
+                agent_num / len(region.available_agents)
+                if len(region.available_agents) > 0
+                else 1.0
+            )
+            resource_ratio = resource_num / resource_sum if resource_sum > 0 else 1.0
 
+            mismatch = agent_ratio - resource_ratio
             if mismatch < min_mismatch:
                 best_intersection = intersection
                 min_mismatch = mismatch

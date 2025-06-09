@@ -75,7 +75,6 @@ def main() -> None:
 
     except Exception as e:
         logging.error(f"发生错误: {str(e)}", exc_info=True)
-        print(f"发生错误: {str(e)}")
 
 
 if __name__ == "__main__":

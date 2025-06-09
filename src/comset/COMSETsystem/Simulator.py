@@ -200,8 +200,12 @@ class Simulator:
 
     def remove_event(self, event: Event) -> None:
         """Remove an event from the queue"""
-        self.events.remove(event)
-        heapq.heapify(self.events)
+        try:
+            self.events.remove(event)
+            heapq.heapify(self.events)
+        except ValueError:
+            # Event not found, it might have been processed already.
+            pass
 
     def mark_agent_empty(self, agent: AgentEvent) -> None:
         """

@@ -9,3 +9,5 @@ dependencies:
   - tqdm
   - tzdata
   - heapdict
+  - ortools
+  - h3
