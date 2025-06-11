@@ -130,14 +130,14 @@ class MapWithData:
     def map_match(self, longitude: float, latitude: float) -> LocationOnRoad:
         """地图匹配核心方法：将经纬度坐标映射到最近的道路位置"""
         link = self.map.get_nearest_link(longitude, latitude)
-        xy: List[float] = self.map.projector.from_lat_lon(latitude, longitude)
+        x, y = self.map.projector.from_lat_lon(latitude, longitude)
         snap_result = self.snap(
             link.from_vertex.get_x(),
             link.from_vertex.get_y(),
             link.to_vertex.get_x(),
             link.to_vertex.get_y(),
-            xy[0],
-            xy[1],
+            x,
+            y,
         )
         distance_from_start_vertex: float = self.distance(
             snap_result[0],

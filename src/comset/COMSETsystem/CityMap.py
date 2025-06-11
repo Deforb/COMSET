@@ -108,33 +108,34 @@ class CityMap:
     def _travel_time_between_locations(
         self, source: LocationOnRoad, destination: LocationOnRoad
     ) -> int:
-        if (
-            source.road == destination.road
-            and source.get_displacement_on_road(destination) >= 0
-        ):
-            # If the two locations are on the same road and source is closer to the start intersection than destination, 
-            # then the travel time is the difference of travelTimeFromStartIntersection between source and destination.
-            try:
+        try:
+            if (
+                source.road == destination.road
+                and source.get_displacement_on_road(destination) >= 0
+            ):
+                # If the two locations are on the same road and source is closer to the start intersection than destination,
+                # then the travel time is the difference of travelTimeFromStartIntersection between source and destination.
                 travel_time = (
                     source.get_displacement_on_road(destination) / source.road.speed
                 )
-            except ZeroDivisionError:
-                logging.warning("source.road.speed = 0")
-                return int(1e9)
-        else:
-            end_source = LocationOnRoad(source.road, source.road.length)
-            time_to_end = (
-                source.get_displacement_on_road(end_source) / source.road.speed
-            )
-            start_dest = LocationOnRoad(destination.road, 0)
-            time_from_start = (
-                start_dest.get_displacement_on_road(destination)
-                / destination.road.speed
-            )
-            time_between = self._travel_time_between_intersections(
-                source.road.to, destination.road.from_
-            )
-            travel_time = time_to_end + time_between + time_from_start
+
+            else:
+                end_source = LocationOnRoad(source.road, source.road.length)
+                time_to_end = (
+                    source.get_displacement_on_road(end_source) / source.road.speed
+                )
+                start_dest = LocationOnRoad(destination.road, 0)
+                time_from_start = (
+                    start_dest.get_displacement_on_road(destination)
+                    / destination.road.speed
+                )
+                time_between = self._travel_time_between_intersections(
+                    source.road.to, destination.road.from_
+                )
+                travel_time = time_to_end + time_between + time_from_start
+        except ZeroDivisionError:
+            return int(1e9)
+
         return round(travel_time)
 
     @property

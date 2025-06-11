@@ -169,7 +169,7 @@ class MapCreator:
         else:
             self.id_counter = 0
 
-    def create_map(self) -> CityMap:
+    def create_map(self) -> None:
         # Crop the map using the bounding polygon
         self.crop_map()
 
@@ -181,8 +181,6 @@ class MapCreator:
 
         # Create roads from links to connect intersections.
         self.create_roads()
-
-        return self.output_city_map()
 
     def crop_map(self) -> None:
         """Crop a map using the bounding polygon by removing vertices that are outside the polygon."""
@@ -379,8 +377,8 @@ class MapCreator:
 
     def remove_road(self, road: Road) -> None:
         # remove intermediate vertices
-        for link in road.links:
-            self.vertices.pop(link.from_vertex.id, None)
+        for link in road.links[:-1]:
+            self.vertices.pop(link.to_vertex.id, None)
         # remove the from-links of the start vertex
         first_link = road.links[0]
         del first_link.from_vertex.links_map_from[first_link.to_vertex]
@@ -465,8 +463,8 @@ class MapCreator:
     def output_city_map(self) -> CityMap:
         """Returns an instance of CityMap representing the map it created."""
         kd_tree = KdTree()
-        for vertex in self.vertices.values():
-            for link in vertex.get_links_from():
+        for vertex in sorted(self.vertices.values()):
+            for link in sorted(vertex.get_links_from()):
                 kd_tree.insert(link)
         roads: List[Road] = []
         for intersection in self.intersections.values():

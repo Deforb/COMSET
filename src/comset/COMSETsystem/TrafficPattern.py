@@ -229,17 +229,16 @@ class TrafficPattern:
         traveled_distance, traveled_time = self.dynamic_travel_distance(
             time, location_on_road.road.speed, travel_time, location_on_road.road.length
         )
-        # FIXME: 添加边界检查：确保距离在有效范围内
-        traveled_distance = min(
-            traveled_distance,
-            location_on_road.road.length
+
+        if not (
+            0
+            <= traveled_distance
+            <= location_on_road.road.length
             - location_on_road.distance_from_start_intersection
-            - 1e-6,
-        )
-        if traveled_distance < 0:
-            breakpoint()
-            print(f"traveled_distance is less than 0: {traveled_distance}")
-            traveled_distance = 0
+        ):
+            raise ValueError(
+                f"traveled_distance is out of range: {traveled_distance} is not between 0 and {location_on_road.road.length}"
+            )
 
         if traveled_time < travel_time:
             # reached the end of road before travel time is used out

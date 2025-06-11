@@ -238,7 +238,7 @@ class KdTree:
         Args:
             link: the link in question
             n: the Node in question
-            evenLevel: is the current level even?  If so, then the Node's
+            even_level: is the current level even?  If so, then the Node's
             partition band is vertical, so the link will be to the left
             or right of the Node's partition band. If not, then the Node's
             partition band is horizontal, so the link will be above or
@@ -278,8 +278,8 @@ class KdTree:
 
         Args:
             p: the point in question
-            n: the Node in question
-            evenLevel is the current level even?  If so, then the Node's
+            node: the Node in question
+            even_level: is the current level even?  If so, then the Node's
             partition band is vertical, so the point will be to the left
             or right of the Node's partition band. If not, then the Node's
             partition band is horizontal, so the point will be above or
