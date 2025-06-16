@@ -207,19 +207,15 @@ class MapWithData:
         deploy_time = self.earliest_resource_time - 1
         generator = random.Random(self.agent_placement_random_seed)
 
-        events_list: List[AgentEvent] = []
         for _ in range(number_of_agents):
-            road_id = generator.randint(0, len(self.map.roads) - 1)
-            road = self.map.roads[road_id]
+            road = generator.choice(self.map.roads)
             distance = generator.uniform(0, road.length)
             location = LocationOnRoad(road, distance)
 
             ev = AgentEvent(location, deploy_time, simulator, fleetManager)
             simulator.mark_agent_empty(ev)
             # heapq.heappush(self.events, ev)
-            events_list.append(ev)
-
-        self.events.extend(events_list)
+            self.events.append(ev)
 
     # 获取事件队列
     def get_events(self) -> list:

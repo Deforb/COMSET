@@ -139,7 +139,7 @@ class Simulator:
             )
             assert total_simulation_time > 0, "total_simulation_time is less than 0"
             print(f"总模拟时间: {total_simulation_time}")
-
+            event_count = 0
             with tqdm(total=100, desc="Progress", mininterval=1) as pbar:
                 while self.events:
                     event = heapq.heappop(self.events)
@@ -155,7 +155,7 @@ class Simulator:
                         total_simulation_time,
                         self.simulation_time - self.simulation_start_time,
                     )
-
+                    event_count += 1
                     # Update progress bar
                     progress = min(
                         (next_time - self.simulation_start_time)

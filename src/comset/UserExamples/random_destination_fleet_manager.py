@@ -24,7 +24,7 @@ class RandomDestinationFleetManager(FleetManager):
         self.agent_last_appear_time: Dict[int, int] = {}
         self.agent_last_location: Dict[int, LocationOnRoad] = {}
         self.resource_assignment: Dict[int, Resource] = {}
-        self.waiting_resources: Dict[int, Resource] = {}  # key: resource.id
+        self.waiting_resources: Set[Resource] = set()  # sorted in resource.id
         self.available_agent: Set[int] = set()
         self.agent_rnd: Dict[int, Random] = {}
         self.agent_routes: Dict[int, Deque[Intersection]] = {}
@@ -67,56 +67,58 @@ class RandomDestinationFleetManager(FleetManager):
         """
         action = AgentAction.do_nothing()
 
-        if state == ResourceState.AVAILABLE:
-            assigned_agent = self.get_nearest_available_agent(resource, time)
-            if assigned_agent is not None:
-                self.resource_assignment[assigned_agent] = resource
-                self.agent_routes[assigned_agent] = deque()
-                self.available_agent.discard(assigned_agent)
-                action = AgentAction.assign_to(assigned_agent, resource.id)
-            else:
-                self.waiting_resources[resource.id] = resource
-        elif state == ResourceState.DROPPED_OFF:
-            best_resource = None
-            earliest_arrival = float("inf")
-            for res in sorted(self.waiting_resources.values(), key=lambda r: r.id):
-                # If res is in waitingResources, then it must have not expired yet
-                # testing null pointer exception
-                # Warning: map.travelTimeBetween returns the travel time based on speed limits, not
-                # the dynamic travel time. Thus the travel time returned by map.travelTimeBetween may be different
-                # than the actual travel time.
-                travel_time = self.map.travel_time_between(current_loc, res.pickup_loc)
+        match state:
+            case ResourceState.AVAILABLE:
+                assigned_agent = self.get_nearest_available_agent(resource, time)
+                if assigned_agent is not None:
+                    self.resource_assignment[assigned_agent] = resource
+                    self.agent_routes[assigned_agent] = deque()
+                    self.available_agent.discard(assigned_agent)
+                    action = AgentAction.assign_to(assigned_agent, resource.id)
+                else:
+                    self.waiting_resources.add(resource)
+            case ResourceState.DROPPED_OFF:
+                best_resource = None
+                earliest_arrival = float("inf")
+                for res in self.waiting_resources:
+                    # If res is in waitingResources, then it must have not expired yet
+                    # testing null pointer exception
+                    # Warning: map.travelTimeBetween returns the travel time based on speed limits, not
+                    # the dynamic travel time. Thus, the travel time returned by map.travelTimeBetween may be different
+                    # from the actual travel time.
+                    travel_time = self.map.travel_time_between(
+                        current_loc, res.pickup_loc
+                    )
 
-                # if the resource is reachable before expiration
-                arrive_time = time + travel_time
-                if (
-                    arrive_time <= res.expiration_time
-                    and arrive_time < earliest_arrival
-                ):
-                    earliest_arrival = arrive_time
-                    best_resource = res
+                    # if the resource is reachable before expiration
+                    arrive_time = time + travel_time
+                    if (
+                        arrive_time <= res.expiration_time
+                        and arrive_time < earliest_arrival
+                    ):
+                        earliest_arrival = arrive_time
+                        best_resource = res
 
-            if best_resource is not None:
-                del self.waiting_resources[best_resource.id]
-                action = AgentAction.assign_to(
-                    resource.assigned_agent_id, best_resource.id
-                )
-            else:
-                self.available_agent.add(resource.assigned_agent_id)
-                action = AgentAction.do_nothing()
-            self.resource_assignment[resource.assigned_agent_id] = best_resource
-            self.agent_last_location[resource.assigned_agent_id] = current_loc
-            self.agent_last_appear_time[resource.assigned_agent_id] = time
-        elif state == ResourceState.EXPIRED:
-            if resource.id in self.waiting_resources:
-                del self.waiting_resources[resource.id]
-            if resource.assigned_agent_id != -1:
+                if best_resource is not None:
+                    self.waiting_resources.remove(best_resource)
+                    action = AgentAction.assign_to(
+                        resource.assigned_agent_id, best_resource.id
+                    )
+                else:
+                    self.available_agent.add(resource.assigned_agent_id)
+                    action = AgentAction.do_nothing()
+                self.resource_assignment[resource.assigned_agent_id] = best_resource
+                self.agent_last_location[resource.assigned_agent_id] = current_loc
+                self.agent_last_appear_time[resource.assigned_agent_id] = time
+            case ResourceState.EXPIRED:
+                if resource in self.waiting_resources:
+                    self.waiting_resources.remove(resource)
+                if resource.assigned_agent_id != -1:
+                    self.agent_routes[resource.assigned_agent_id] = deque()
+                    self.available_agent.add(resource.assigned_agent_id)
+                    self.resource_assignment.pop(resource.assigned_agent_id, None)
+            case ResourceState.PICKED_UP:
                 self.agent_routes[resource.assigned_agent_id] = deque()
-                self.available_agent.add(resource.assigned_agent_id)
-                if resource.assigned_agent_id in self.resource_assignment:
-                    del self.resource_assignment[resource.assigned_agent_id]
-        elif state == ResourceState.PICKED_UP:
-            self.agent_routes[resource.assigned_agent_id] = deque()
 
         return action
 

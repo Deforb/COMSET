@@ -230,15 +230,12 @@ class TrafficPattern:
             time, location_on_road.road.speed, travel_time, location_on_road.road.length
         )
 
-        if not (
-            0
-            <= traveled_distance
-            <= location_on_road.road.length
+        traveled_distance = min(
+            traveled_distance,
+            location_on_road.road.length
             - location_on_road.distance_from_start_intersection
-        ):
-            raise ValueError(
-                f"traveled_distance is out of range: {traveled_distance} is not between 0 and {location_on_road.road.length}"
-            )
+            - 1e-6,
+        )
 
         if traveled_time < travel_time:
             # reached the end of road before travel time is used out
