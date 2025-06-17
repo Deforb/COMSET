@@ -195,20 +195,31 @@ class RandomDestinationFleetManager(FleetManager):
         Returns:
             ID of the nearest agent or None if none available.
         """
+        # Early exit if resource has already expired (current_time is past expiration_time)
+        # If expiration_time == current_time, an agent at the location (travel_time=0) could still be valid.
+        if resource.expiration_time < current_time:
+            return None
+
         earliest_arrival = float("inf")
         best_agent = None
 
-        for agent_id in sorted(self.available_agent):
+        # Pre-fetch resource attributes to avoid repeated access in the loop
+        resource_pickup_loc = resource.pickup_loc
+
+        for agent_id in self.available_agent:
+            # Check if agent has a recorded last location; if not, it cannot be processed.
             if agent_id not in self.agent_last_location:
                 continue
 
             last_time = self.agent_last_appear_time[agent_id]
             last_loc = self.agent_last_location[agent_id]
+            
             cur_loc = self.get_current_location(last_time, last_loc, current_time)
+            
             # Warning: map.travel_time_between returns the travel time based on speed limits, not
             # the dynamic travel time. Thus, the travel time returned by map.travel_time_between may be different
             # from the actual travel time.
-            travel_time = self.map.travel_time_between(cur_loc, resource.pickup_loc)
+            travel_time = self.map.travel_time_between(cur_loc, resource_pickup_loc) # Use pre-fetched attribute
             arrive_time = current_time + travel_time
 
             if arrive_time < earliest_arrival:

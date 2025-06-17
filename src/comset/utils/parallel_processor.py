@@ -17,7 +17,7 @@ class ParallelProcessor:
     支持多种并行处理模式，包括map、starmap等。
     """
 
-    n_jobs: int = cpu_count()
+    n_jobs: int = cpu_count() - 1
 
     def __init__(self, n_jobs: Optional[int] = None):
         if n_jobs is not None:

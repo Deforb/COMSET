@@ -24,6 +24,8 @@ class Road:
     travel_time: float = 0.0
     # 平均速度（米/秒）
     speed: float = 0.0
+    # 速度的倒数，用于优化计算
+    inv_speed: float = 0.0
     # 唯一ID
     id: int = 0
 
@@ -54,6 +56,7 @@ class Road:
             self.to = to_intersection
             self.links = links
             self.speed = original.speed
+            self.inv_speed = original.inv_speed # Copy inv_speed as well
             self.length = original.length
             self.travel_time = original.travel_time
 
@@ -70,13 +73,19 @@ class Road:
         self.travel_time += link.travel_time
 
     def set_speed(self):
-        self.speed = self.length / self.travel_time
+        if self.travel_time > 0: # Avoid division by zero if travel_time is zero
+            self.speed = self.length / self.travel_time
+            self.inv_speed = 1.0 / self.speed if self.speed > 0 else float('inf') # Avoid division by zero if speed is zero
+        else:
+            self.speed = 0.0
+            self.inv_speed = float('inf') # Or handle as an error/special case
 
     def __lt__(self, other: Road):
         return self.id < other.id
 
     def __eq__(self, road: Road) -> bool:
-        return road.from_ == self.from_ and road.to == self.to
+        # return road.from_ == self.from_ and road.to == self.to
+        return self.id == road.id
 
     def __str__(self) -> str:
         return f"{self.from_},{self.to},{self.length},{self.travel_time},{self.speed}"

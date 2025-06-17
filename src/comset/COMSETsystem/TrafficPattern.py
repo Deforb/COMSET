@@ -155,11 +155,19 @@ class TrafficPattern:
         total_time: float = 0.0
         current_time: float = time
 
+        # Pre-fetch attributes to local variables to reduce lookups in the loop
+        last_epoch_begin_time = self.last_epoch_begin_time
+        first_epoch_begin_time = self.first_epoch_begin_time
+        time_step = self.step # Renamed to avoid conflict with 'step_time' variable inside loop
+        traffic_pattern_data = self.traffic_pattern
+        last_epoch_speed_factor = self.last_epoch_speed_factor
+        first_epoch_speed_factor = self.first_epoch_speed_factor
+
         while True:
             step_time: float = -1.0
             # 到达最后一个时段
-            if current_time >= self.last_epoch_begin_time:
-                speed_factor = self.last_epoch_speed_factor
+            if current_time >= last_epoch_begin_time:
+                speed_factor = last_epoch_speed_factor
                 adjusted_speed = unadjusted_speed * speed_factor
                 distance = (travel_time - total_time) * adjusted_speed
 
@@ -174,19 +182,19 @@ class TrafficPattern:
 
             # 还在前几个时段
             else:
-                if current_time < self.first_epoch_begin_time:
-                    step_time = self.first_epoch_begin_time - current_time
-                    speed_factor = self.first_epoch_speed_factor
+                if current_time < first_epoch_begin_time:
+                    step_time = first_epoch_begin_time - current_time
+                    speed_factor = first_epoch_speed_factor
                 else:
                     # 计算当前所在的时段索引
                     pattern_index = int(
-                        (current_time - self.first_epoch_begin_time) // self.step
+                        (current_time - first_epoch_begin_time) // time_step
                     )
                     traffic_point: TrafficPattern.TrafficPatternItem = (
-                        self.traffic_pattern[pattern_index]
+                        traffic_pattern_data[pattern_index]
                     )
                     step_time = (
-                        traffic_point.epoch_begin_time + self.step - current_time
+                        traffic_point.epoch_begin_time + time_step - current_time
                     )
                     speed_factor = traffic_point.speed_factor
 

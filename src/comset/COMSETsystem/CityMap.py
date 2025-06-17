@@ -116,18 +116,18 @@ class CityMap:
                 # If the two locations are on the same road and source is closer to the start intersection than destination,
                 # then the travel time is the difference of travelTimeFromStartIntersection between source and destination.
                 travel_time = (
-                    source.get_displacement_on_road(destination) / source.road.speed
+                    source.get_displacement_on_road(destination) * source.road.inv_speed
                 )
 
             else:
                 end_source = LocationOnRoad(source.road, source.road.length)
                 time_to_end = (
-                    source.get_displacement_on_road(end_source) / source.road.speed
+                    source.get_displacement_on_road(end_source) * source.road.inv_speed
                 )
                 start_dest = LocationOnRoad(destination.road, 0)
                 time_from_start = (
                     start_dest.get_displacement_on_road(destination)
-                    / destination.road.speed
+                    * destination.road.inv_speed
                 )
                 time_between = self._travel_time_between_intersections(
                     source.road.to, destination.road.from_
