@@ -1,14 +1,12 @@
 from __future__ import annotations
+
 from abc import ABC, abstractmethod
-from typing import Optional, TypeVar, TYPE_CHECKING, override
+from typing import TYPE_CHECKING, Optional, override
 
 if TYPE_CHECKING:
-    from COMSETsystem.Simulator import Simulator
     from COMSETsystem.FleetManager import FleetManager
+    from COMSETsystem.Simulator import Simulator
     # from COMSETsystem.AgentEvent import AgentEvent
-
-# For type hinting the return type of trigger()
-EventType = TypeVar("EventType", bound="Event")
 
 
 class Event(ABC):
@@ -51,7 +49,7 @@ class Event(ABC):
         self._priority = priority  # Initialize priority
 
     @abstractmethod
-    def trigger(self) -> Optional[EventType]:
+    def trigger(self) -> Optional[Event]:
         """
         Function called when the Event needs to be executed.
 
@@ -68,7 +66,7 @@ class Event(ABC):
     def id(self, value: int) -> None:
         self._id = value
 
-    def __lt__(self, other: "Event") -> bool:
+    def __lt__(self, other: Event) -> bool:
         """
         To be used by the PriorityQueue to order the Events
 
@@ -94,10 +92,8 @@ class Event(ABC):
         Set the time of the event.
         Note: Should never change the time when the event is on the simulator queue!
         """
-        # TODO: it costs too much time to check this every time,
-        # temporally delete it and plan refactor to heapdict.
-        # if hasattr(self, "simulator") and self.simulator is not None:
-        #     assert not self.simulator.has_event(self)
+        if hasattr(self, "simulator") and self.simulator is not None:
+            assert not self.simulator.has_event(self)
         self.time = value
 
     @override

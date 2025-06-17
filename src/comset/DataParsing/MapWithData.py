@@ -118,7 +118,6 @@ class MapWithData:
                 )
 
             self.events = events_list
-            # heapq.heapify(self.events)
 
         except Exception:
             import traceback
@@ -218,8 +217,7 @@ class MapWithData:
             self.events.append(ev)
 
     # 获取事件队列
-    def get_events(self) -> list:
-        heapq.heapify(self.events)
+    def get_events(self) -> List[Event]:
         return self.events
 
     def build_sliding_traffic_pattern(

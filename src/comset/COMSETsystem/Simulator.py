@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-import heapq
 from typing import TYPE_CHECKING, Dict, List, Optional, Set
 
+from heapdict import heapdict  # Changed from heapq
 from tqdm import tqdm
 
 from comset.COMSETsystem.AgentEvent import AgentEvent
@@ -49,7 +49,7 @@ class Simulator:
         # A deep copy of map to be passed to agents.
         # This is a way to make map unmodifiable.
         self.map_for_agents: Optional[CityMap] = None
-        self.events: List[Event] = []
+        self.events: heapdict = heapdict()  # Changed from List[Event] to heapdict
         self.empty_agents: Set[AgentEvent] = set()
         self.serving_agents: Set[AgentEvent] = set()
         self.simulation_start_time: int = 0
@@ -112,8 +112,12 @@ class Simulator:
         )
 
         # Initialize the event queue.
-        self.events = map_wd.get_events()
-        # heapq.heapify(self.events)
+        # self.events = map_wd.get_events() # Old initialization
+        # heapq.heapify(self.events) # Old heapify
+        for event_obj in map_wd.get_events():  # New initialization for heapdict
+            self.events[event_obj.id] = (
+                event_obj  # Use event.id as key, event object as value
+            )
 
         self.mapping_event_id()
 
@@ -130,9 +134,15 @@ class Simulator:
             print("Map is null at beginning of run")
 
         try:
-            initial_time = heapq.nsmallest(1, self.events, key=lambda e: e.time)[
-                0
-            ].time  # TODO: events[0].time
+            # initial_time = heapq.nsmallest(1, self.events, key=lambda e: e.time)[
+            #     0
+            # ].time  # TODO: events[0].time
+            if not self.events:  # Check if events is empty
+                print("事件队列为空，模拟提前结束。")
+                return
+            _, initial_event_obj = self.events.peekitem()
+            # Get the smallest item without removing
+            initial_time = initial_event_obj.time
             self.simulation_start_time = self.simulation_time = initial_time
             total_simulation_time = (
                 self.simulation_end_time - self.simulation_start_time
@@ -142,7 +152,7 @@ class Simulator:
             event_count = 0
             with tqdm(total=100, desc="Progress", mininterval=1) as pbar:
                 while self.events:
-                    event = heapq.heappop(self.events)
+                    _, event = self.events.popitem()
                     assert event is not None, "event is None"
                     next_time = event.time
                     assert next_time >= self.simulation_time, (
@@ -174,7 +184,7 @@ class Simulator:
                             if new_event:
                                 self.add_event(new_event)
                         except Exception as e:
-                            print(f"事件{event}触发失败: {str(e)}")
+                            print(f"事件{event}触发失败")
                             raise e
 
         except Exception as e:
@@ -190,21 +200,19 @@ class Simulator:
 
     def has_event(self, event: Event) -> bool:
         """Check if event exists in queue"""
-        return event in self.events
+        return event.id in self.events
 
     def add_event(self, event: Event) -> None:
         """Add an event to the queue"""
         if event.time < self.simulation_time:
             raise ValueError("Event time in the past")
-        heapq.heappush(self.events, event)
+        self.events[event.id] = event
 
     def remove_event(self, event: Event) -> None:
         """Remove an event from the queue"""
         try:
-            self.events.remove(event)
-            heapq.heapify(self.events)
-        except ValueError:
-            # Event not found, it might have been processed already.
+            del self.events[event.id]  # New remove for heapdict using event.id as key
+        except KeyError:  # heapdict raises KeyError if key not found
             pass
 
     def mark_agent_empty(self, agent: AgentEvent) -> None:
@@ -253,8 +261,8 @@ class Simulator:
 
     def mapping_event_id(self) -> None:
         """Map event IDs to their respective events"""
-        for event in self.events:
+        for id, event in self.events.items():
             if isinstance(event, AgentEvent):
-                self.agent_map[event.id] = event
+                self.agent_map[id] = event
             elif isinstance(event, ResourceEvent):
-                self.res_map[event.id] = event
+                self.res_map[id] = event

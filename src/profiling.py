@@ -49,7 +49,8 @@ def display():
     # 清理文件名，使其更易读
     p.strip_dirs()
 
-    p.sort_stats(SortKey.TIME).print_stats(20)
+    p.sort_stats(SortKey.TIME).print_stats(10)
+    p.sort_stats(SortKey.CUMULATIVE).print_stats(10)
 
 
 if __name__ == "__main__":
